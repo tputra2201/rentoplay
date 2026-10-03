@@ -1324,7 +1324,9 @@ function StationDialogBody({
             {section === "payment" && (<>
             <Separator />
 
-            <div className="space-y-1 text-sm">
+            {/* Rincian tagihan dibekukan: tetap terlihat saat blok pembayaran di bawahnya digulir. */}
+            <div className="sticky top-[40px] z-[5] -mx-6 space-y-1 border-b border-border bg-background px-6 py-3 text-sm">
+
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Rental</span>
                 <span>{formatRupiah(bill?.rental ?? rentalTotal(session, now))}</span>
@@ -1521,16 +1523,25 @@ function StationDialogBody({
                 <p className="text-sm font-medium">Tipe pembayaran</p>
                 <div className="flex items-center gap-2">
                   {allow("sesi.gabung") && !mergedParent && (
-                    <Button type="button" size="sm" variant="outline" onClick={() => setMergeOpen(true)}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="border border-primary-foreground/25 shadow-md"
+                      onClick={() => setMergeOpen(true)}
+                    >
                       Gabung Tagihan
                     </Button>
                   )}
+
+
                   {activePayments.length > 1 && allow("sesi.split") && (
                     <Button
                       type="button"
                       size="sm"
-                      variant="outline"
+                      className="border border-primary-foreground/25 shadow-md"
                       onClick={() => {
+
+
                         if (splitMode) {
                           setSplitMode(false);
                           setSplits([]);
