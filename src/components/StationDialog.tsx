@@ -81,6 +81,8 @@ import {
 
 const DURATIONS = [30, 60, 90, 120, 180];
 
+// Wrapper: hanya mengembalikan null saat tidak ada unit terpilih. Dengan begitu
+// semua hook di StationDialogBody selalu berjalan dengan jumlah yang sama.
 export function StationDialog({
   station,
   open,
@@ -88,6 +90,28 @@ export function StationDialog({
   initialSection = "timer",
 }: {
   station: Station | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  initialSection?: "timer" | "order" | "payment";
+}) {
+  if (!station) return null;
+  return (
+    <StationDialogBody
+      station={station}
+      open={open}
+      onOpenChange={onOpenChange}
+      initialSection={initialSection}
+    />
+  );
+}
+
+function StationDialogBody({
+  station,
+  open,
+  onOpenChange,
+  initialSection = "timer",
+}: {
+  station: Station;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialSection?: "timer" | "order" | "payment";
@@ -239,7 +263,6 @@ export function StationDialog({
   const selectedPayment =
     payment || activePayments[0]?.name || "Cash";
 
-  if (!station) return null;
   const session = station.session;
   const rate = rates[station.console] ?? 0;
   const chosenPackage = packages.find((item) => item.id === packageId);
