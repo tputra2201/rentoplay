@@ -85,11 +85,14 @@ export function StationDialog({
   station,
   open,
   onOpenChange,
+  initialSection = "timer",
 }: {
   station: Station | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialSection?: "timer" | "order" | "payment";
 }) {
+  const [section, setSection] = useState<"timer" | "order" | "payment">(initialSection);
   const unit = useUnitLabel();
   const { confirm: confirmAction, dialog: confirmDialog } = useConfirm();
   const allow = useCan();
@@ -767,6 +770,15 @@ export function StationDialog({
           </div>
         ) : (
           <div className="space-y-5">
+            <div className="sticky top-0 z-10 -mx-1 grid grid-cols-3 gap-1 rounded-lg bg-secondary p-1">
+              {(["timer","order","payment"] as const).map((k) => (
+                <button key={k} type="button" onClick={() => setSection(k)}
+                  className={`rounded-md py-1.5 text-sm font-semibold transition-colors ${section === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+                  {k === "timer" ? "Timer" : k === "order" ? "Order" : "Payment"}
+                </button>
+              ))}
+            </div>
+            {section === "timer" && (<>
             <div className="surface-panel p-4 text-center">
               <p className="text-xs uppercase tracking-wider text-muted-foreground">
                 {session.mode === "open" ? "Waktu berjalan" : "Sisa waktu"}
@@ -1029,6 +1041,8 @@ export function StationDialog({
                 )}
               </div>
             )}
+            </>)}
+            {section === "order" && (<>
 
 
             {addonRentals.some((a) => a.active) && allow("sesi.addon") && (
@@ -1273,132 +1287,8 @@ export function StationDialog({
                 </Button>
               )}
             </div>
-
-
-            {session && bill && allow("sesi.diskon") && (
-              <div className="space-y-2 rounded-md border border-border p-3">
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label>Diskon transaksi</Label>
-                    <Select
-                      value={session.discountType ?? "fixed"}
-                      onValueChange={(v) =>
-                        setSessionDiscount(station.id, { type: v as DiscountType })
-                      }
-                    >
-                      <SelectTrigger aria-label="Jenis diskon transaksi">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="fixed">Rupiah</SelectItem>
-                        <SelectItem value="percent">Persen</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="session-disc">Nilai diskon</Label>
-                    <Input
-                      id="session-disc"
-                      type="number"
-                      min={0}
-                      value={session.discountValue ?? 0}
-                      onChange={(e) =>
-                        setSessionDiscount(station.id, {
-                          value: Math.max(0, Number(e.target.value) || 0),
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Promo yang sedang berlaku, bisa diberikan satu atau beberapa sekaligus. */}
-            {allow("sesi.promo") && (
-              <PromoPicker
-                target={{ type: "station", id: station.id }}
-                {...(session.promoIds ? { promoIds: session.promoIds } : {})}
-              />
-            )}
-
-            {/* Gabung tagihan: TV lain dan meja kafe dibayar dari panel ini. */}
-
-            <div className="space-y-2 rounded-lg bg-secondary/50 p-3">
-              {mergedParent ? (
-                <p className="text-sm text-muted-foreground">
-                  Tagihan {unit} ini digabung ke <strong>{mergedParent.name}</strong> — pembayarannya
-                  dilakukan dari panel {mergedParent.name}.
-                </p>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium">Gabung Tagihan</p>
-                    {allow("sesi.gabung") && (
-                      <Button type="button" size="sm" variant="outline" onClick={() => setMergeOpen(true)}>
-                        Gabung Tagihan
-                      </Button>
-                    )}
-                  </div>
-                  {transferredLines.length > 0 ? (
-                    <div className="space-y-1">
-                      {transferredLines.map((line) => (
-                        <div key={line.id} className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">{line.name}</span>
-                          <span className="font-semibold">{formatRupiah(line.price * line.qty)}</span>
-                        </div>
-                      ))}
-                      <p className="text-xs text-muted-foreground">
-                        {unit} asalnya sudah kembali tersedia dan bisa dijual lagi. Untuk membatalkan,
-                        hapus barisnya di daftar pesanan.
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      Satukan tagihan {unit} lain, atau titipkan pesanan meja kafe ke {unit} ini. {unit} yang
-                      tagihannya dipindah langsung tersedia kembali.
-                    </p>
-                  )}
-
-                </>
-              )}
-            </div>
-
-            {!isSettled && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="pay-amount">Jumlah dibayar</Label>
-                  <button
-                    type="button"
-                    className="text-xs text-primary underline-offset-2 hover:underline"
-                    onClick={() => setPayAmount("")}
-                  >
-                    Bayar lunas
-                  </button>
-                </div>
-                <div className="relative">
-                  <Wallet className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="pay-amount"
-                    className="pl-9"
-                    type="number"
-                    min={0}
-                    max={dueAmount}
-                    value={payAmount === "" ? String(dueAmount) : payAmount}
-                    onChange={(e) => setPayAmount(e.target.value)}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Bisa bayar sebagian di depan. Sisa {formatRupiah(Math.max(0, dueAmount - payTarget))}{" "}
-                  tetap jadi tagihan berjalan.
-                </p>
-              </div>
-            )}
-
-
-
-
-
-
+            </>)}
+            {section === "payment" && (<>
             <Separator />
 
             <div className="space-y-1 text-sm">
@@ -1525,6 +1415,96 @@ export function StationDialog({
                   Waktu habis — silakan akhiri atau tambah waktu
                 </Badge>
               )}
+
+
+
+            {session && bill && allow("sesi.diskon") && (
+              <div className="space-y-2 rounded-md border border-border p-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label>Diskon transaksi</Label>
+                    <Select
+                      value={session.discountType ?? "fixed"}
+                      onValueChange={(v) =>
+                        setSessionDiscount(station.id, { type: v as DiscountType })
+                      }
+                    >
+                      <SelectTrigger aria-label="Jenis diskon transaksi">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="fixed">Rupiah</SelectItem>
+                        <SelectItem value="percent">Persen</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="session-disc">Nilai diskon</Label>
+                    <Input
+                      id="session-disc"
+                      type="number"
+                      min={0}
+                      value={session.discountValue ?? 0}
+                      onChange={(e) =>
+                        setSessionDiscount(station.id, {
+                          value: Math.max(0, Number(e.target.value) || 0),
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Promo yang sedang berlaku, bisa diberikan satu atau beberapa sekaligus. */}
+            {allow("sesi.promo") && (
+              <PromoPicker
+                target={{ type: "station", id: station.id }}
+                {...(session.promoIds ? { promoIds: session.promoIds } : {})}
+              />
+            )}
+
+            {/* Gabung tagihan: TV lain dan meja kafe dibayar dari panel ini. */}
+
+            <div className="space-y-2 rounded-lg bg-secondary/50 p-3">
+              {mergedParent ? (
+                <p className="text-sm text-muted-foreground">
+                  Tagihan {unit} ini digabung ke <strong>{mergedParent.name}</strong> — pembayarannya
+                  dilakukan dari panel {mergedParent.name}.
+                </p>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium">Gabung Tagihan</p>
+                    {allow("sesi.gabung") && (
+                      <Button type="button" size="sm" variant="outline" onClick={() => setMergeOpen(true)}>
+                        Gabung Tagihan
+                      </Button>
+                    )}
+                  </div>
+                  {transferredLines.length > 0 ? (
+                    <div className="space-y-1">
+                      {transferredLines.map((line) => (
+                        <div key={line.id} className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">{line.name}</span>
+                          <span className="font-semibold">{formatRupiah(line.price * line.qty)}</span>
+                        </div>
+                      ))}
+                      <p className="text-xs text-muted-foreground">
+                        {unit} asalnya sudah kembali tersedia dan bisa dijual lagi. Untuk membatalkan,
+                        hapus barisnya di daftar pesanan.
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Satukan tagihan {unit} lain, atau titipkan pesanan meja kafe ke {unit} ini. {unit} yang
+                      tagihannya dipindah langsung tersedia kembali.
+                    </p>
+                  )}
+
+                </>
+              )}
+            </div>
 
             {!isSettled && (
             <div className="space-y-2">
@@ -1669,6 +1649,42 @@ export function StationDialog({
 
 
 
+            {!isSettled && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="pay-amount">Jumlah dibayar</Label>
+                  <button
+                    type="button"
+                    className="text-xs text-primary underline-offset-2 hover:underline"
+                    onClick={() => setPayAmount("")}
+                  >
+                    Bayar lunas
+                  </button>
+                </div>
+                <div className="relative">
+                  <Wallet className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="pay-amount"
+                    className="pl-9"
+                    type="number"
+                    min={0}
+                    max={dueAmount}
+                    value={payAmount === "" ? String(dueAmount) : payAmount}
+                    onChange={(e) => setPayAmount(e.target.value)}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Bisa bayar sebagian di depan. Sisa {formatRupiah(Math.max(0, dueAmount - payTarget))}{" "}
+                  tetap jadi tagihan berjalan.
+                </p>
+              </div>
+            )}
+
+
+
+
+
+
             <div className="grid gap-2 sm:grid-cols-2">
               <Button
                 className="w-full"
@@ -1706,6 +1722,7 @@ export function StationDialog({
                 Sesi hanya bisa diakhiri setelah seluruh tagihan lunas.
               </p>
             )}
+            </>)}
 
             <AlertDialog open={confirmPay} onOpenChange={setConfirmPay}>
               <AlertDialogContent>
