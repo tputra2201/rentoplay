@@ -79,7 +79,6 @@ import {
 } from "@/lib/billing-store";
 
 
-const DURATIONS = [30, 60, 90, 120, 180];
 
 // Wrapper: hanya mengembalikan null saat tidak ada unit terpilih. Dengan begitu
 // semua hook di StationDialogBody selalu berjalan dengan jumlah yang sama.
