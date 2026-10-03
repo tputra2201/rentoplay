@@ -187,6 +187,19 @@
   letter-spacing: 0.05em;
 }
 
+/* Ukuran angka timer & tagihan ikut melebar/sempit bersama kartu TV. */
+@utility timer-fluid {
+  font-size: clamp(15px, 13cqw, 24px);
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+@utility bill-fluid {
+  font-size: clamp(15px, 12cqw, 24px);
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
 @keyframes alarm-pulse {
   0%,
   100% {

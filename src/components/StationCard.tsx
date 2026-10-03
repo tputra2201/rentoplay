@@ -96,7 +96,7 @@ export function StationCard({
         }
       }}
       className={cn(
-        "surface-panel group cursor-pointer relative block w-full min-w-0 max-w-full overflow-hidden p-3 text-left transition-transform duration-200 hover:-translate-y-1",
+        "surface-panel @container group cursor-pointer relative block w-full min-w-0 max-w-full overflow-hidden p-3 text-left transition-transform duration-200 hover:-translate-y-1",
         status === "idle" && "opacity-90 hover:glow-primary",
         status === "booked" && "border-primary/60 glow-primary",
         status === "playing" && "glow-accent",
@@ -156,7 +156,7 @@ export function StationCard({
         {!session ? (
           booking ? (
             <div>
-              <p className="timer-digits text-2xl text-primary">
+              <p className="timer-digits timer-fluid text-primary">
                 {new Date(booking.startAt).toLocaleTimeString("id-ID", {
                   hour: "2-digit",
                   minute: "2-digit",
@@ -167,14 +167,14 @@ export function StationCard({
               </p>
             </div>
           ) : (
-            <p className="timer-digits text-2xl text-muted-foreground">--:--:--</p>
+            <p className="timer-digits timer-fluid text-muted-foreground">--:--:--</p>
           )
         ) : (
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
               {session.mode === "open" ? (
                 <>
-                  <p className="timer-digits text-2xl text-accent">
+                  <p className="timer-digits timer-fluid text-accent">
                     {formatClock(elapsedSeconds(session, now))}
                   </p>
                   <p className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -185,7 +185,7 @@ export function StationCard({
                 <>
                   <p
                     className={cn(
-                      "timer-digits text-2xl",
+                      "timer-digits timer-fluid",
                       status === "timeup" ? "text-destructive" : "text-primary",
                     )}
                   >
@@ -228,7 +228,7 @@ export function StationCard({
           </p>
           <p
             className={cn(
-              "font-display text-2xl font-extrabold",
+              "font-display bill-fluid font-extrabold",
               paid > 0 && due <= 0 ? statusNameColor[status] : "text-neon",
             )}
           >
