@@ -1526,21 +1526,21 @@ function StationDialogBody({
                     <Button
                       type="button"
                       size="sm"
-                      variant="secondary"
-                      className="border border-primary/50 bg-primary/25 text-primary shadow-sm hover:bg-primary/35"
+                      className="border border-primary-foreground/25 shadow-md"
                       onClick={() => setMergeOpen(true)}
                     >
                       Gabung Tagihan
                     </Button>
                   )}
 
+
                   {activePayments.length > 1 && allow("sesi.split") && (
                     <Button
                       type="button"
                       size="sm"
-                      variant="secondary"
-                      className="border border-primary/50 bg-primary/25 text-primary shadow-sm hover:bg-primary/35"
+                      className="border border-primary-foreground/25 shadow-md"
                       onClick={() => {
+
 
                         if (splitMode) {
                           setSplitMode(false);
