@@ -131,7 +131,7 @@ export function StationCard({
         <Badge
           variant="outline"
           className={cn(
-            "border-current text-[10px] uppercase tracking-wider",
+            "max-w-full overflow-hidden border-current text-[10px] uppercase tracking-wider",
             status === "idle" && "text-muted-foreground",
             status === "booked" && "text-primary",
             status === "playing" && "text-accent",
@@ -170,7 +170,7 @@ export function StationCard({
             <p className="timer-digits timer-fluid text-muted-foreground">--:--:--</p>
           )
         ) : (
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-1">
             <div className="min-w-0">
               {session.mode === "open" ? (
                 <>
@@ -201,7 +201,7 @@ export function StationCard({
               <Button
                 size="icon"
                 variant={isPaused(session) ? "default" : "outline"}
-                className="size-9 shrink-0"
+                className="size-8 shrink-0"
                 title={isPaused(session) ? "Lanjutkan" : "Pause"}
                 aria-label={isPaused(session) ? "Lanjutkan" : "Pause"}
                 onClick={(e) => {
