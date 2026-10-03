@@ -53,6 +53,7 @@ function Dashboard() {
     businessProfile,
   } = useBilling();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [section, setSection] = useState<"timer" | "order" | "payment">("timer");
 
   const active = stations.filter((s) => s.session);
   const available = stations.filter((s) => stationStatus(s, now, bookings) === "idle");
