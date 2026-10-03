@@ -53,6 +53,7 @@ function Dashboard() {
     businessProfile,
   } = useBilling();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [section, setSection] = useState<"timer" | "order" | "payment">("timer");
 
   const active = stations.filter((s) => s.session);
   const available = stations.filter((s) => stationStatus(s, now, bookings) === "idle");
@@ -155,7 +156,7 @@ function Dashboard() {
             <StationCard
               station={station}
               now={now}
-              onClick={() => setSelectedId(station.id)}
+              onClick={(sec) => { setSection(sec ?? "timer"); setSelectedId(station.id); }}
             />
           </SortableItem>
         ))}
@@ -175,7 +176,8 @@ function Dashboard() {
       )}
 
       <StationDialog
-        key={selectedId ?? "kosong"}
+        key={`${selectedId ?? "kosong"}-${section}`}
+        initialSection={section}
         station={selected}
         open={selected !== null}
         onOpenChange={(open) => !open && setSelectedId(null)}

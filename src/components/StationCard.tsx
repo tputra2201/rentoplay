@@ -1,4 +1,4 @@
-import { Gamepad2, Clock, Utensils, Infinity as InfinityIcon, Pause, PlayCircle } from "lucide-react";
+import { Gamepad2, Clock, Utensils, Infinity as InfinityIcon, Pause, PlayCircle, Timer, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCan } from "@/lib/use-can";
@@ -43,7 +43,7 @@ export function StationCard({
 }: {
   station: Station;
   now: number;
-  onClick: () => void;
+  onClick: (section?: "timer" | "order" | "payment") => void;
 }) {
   const {
     bookings,
@@ -88,7 +88,7 @@ export function StationCard({
     <div
       role="button"
       tabIndex={0}
-      onClick={onClick}
+      onClick={() => onClick()}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
@@ -223,7 +223,18 @@ export function StationCard({
       </div>
 
       {session && (
-        <div className="mt-3" onClick={(e) => e.stopPropagation()}>
+        <div className="mt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
+          <div className="grid grid-cols-3 gap-1">
+            <Button size="sm" variant="secondary" className="px-1 text-xs" onClick={() => onClick("timer")}>
+              <Timer className="size-3.5" /> Timer
+            </Button>
+            <Button size="sm" variant="secondary" className="px-1 text-xs" onClick={() => onClick("order")}>
+              <Utensils className="size-3.5" /> Order
+            </Button>
+            <Button size="sm" variant="secondary" className="px-1 text-xs" onClick={() => onClick("payment")}>
+              <Wallet className="size-3.5" /> Payment
+            </Button>
+          </div>
           {!allow("sesi.jeda") ? null : isPaused(session) ? (
             <Button
               size="sm"
