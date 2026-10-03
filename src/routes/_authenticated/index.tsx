@@ -155,7 +155,7 @@ function Dashboard() {
             <StationCard
               station={station}
               now={now}
-              onClick={() => setSelectedId(station.id)}
+              onClick={(sec) => { setSection(sec ?? "timer"); setSelectedId(station.id); }}
             />
           </SortableItem>
         ))}
@@ -175,7 +175,8 @@ function Dashboard() {
       )}
 
       <StationDialog
-        key={selectedId ?? "kosong"}
+        key={`${selectedId ?? "kosong"}-${section}`}
+        initialSection={section}
         station={selected}
         open={selected !== null}
         onOpenChange={(open) => !open && setSelectedId(null)}
