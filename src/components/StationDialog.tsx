@@ -1063,7 +1063,9 @@ function StationDialogBody({
                     value={addonPick}
                     onValueChange={(v) => {
                       setAddonPick(v);
-                      setAddonMinutes("");
+                      setAddonMinutes(
+                        addonRentals.find((a) => a.id === v)?.mode === "hourly" ? "60" : "",
+                      );
                     }}
                   >
                     <SelectTrigger className="w-56" aria-label="Pilih additional rental">
@@ -1081,16 +1083,38 @@ function StationDialogBody({
                     </SelectContent>
                   </Select>
                   {addonRentals.find((a) => a.id === addonPick)?.mode === "hourly" && (
-                    <Input
-                      type="number"
-                      min={0}
-                      inputMode="numeric"
-                      className="w-40"
-                      aria-label="Durasi additional rental (menit)"
-                      placeholder="Durasi (menit)"
-                      value={addonMinutes}
-                      onChange={(e) => setAddonMinutes(e.target.value)}
-                    />
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Durasi :</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          setAddonMinutes(String(Math.max(30, (Number(addonMinutes) || 60) - 30)))
+                        }
+                      >
+                        -
+                      </Button>
+                      <Input
+                        type="number"
+                        min={30}
+                        step={30}
+                        inputMode="numeric"
+                        className="h-8 w-20 text-center"
+                        aria-label="Durasi additional rental (menit)"
+                        value={addonMinutes}
+                        onChange={(e) => setAddonMinutes(e.target.value)}
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setAddonMinutes(String((Number(addonMinutes) || 0) + 30))}
+                      >
+                        +
+                      </Button>
+                      <span className="text-sm text-muted-foreground">menit</span>
+                    </div>
                   )}
                   <Button
                     size="sm"
@@ -1116,8 +1140,7 @@ function StationDialogBody({
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Durasi dikosongkan = ikut lama sesi {unit}. Isi menitnya bila sewa tambahan lebih
-                  singkat, misal 60 menit.
+                  Durasi bisa diketik atau digeser per 30 menit; dikosongkan = ikut lama sesi {unit}.
                 </p>
                 {(session.addons ?? []).length > 0 && (
                   <ul className="mt-2 space-y-1">
