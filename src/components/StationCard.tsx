@@ -169,28 +169,54 @@ export function StationCard({
           ) : (
             <p className="timer-digits text-2xl text-muted-foreground">--:--:--</p>
           )
-        ) : session.mode === "open" ? (
-          <div>
-            <p className="timer-digits text-2xl text-accent">
-              {formatClock(elapsedSeconds(session, now))}
-            </p>
-            <p className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
-              <InfinityIcon className="size-3" /> Main Sepuasnya
-            </p>
-          </div>
         ) : (
-          <div>
-            <p
-              className={cn(
-                "timer-digits text-2xl",
-                status === "timeup" ? "text-destructive" : "text-primary",
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              {session.mode === "open" ? (
+                <>
+                  <p className="timer-digits text-2xl text-accent">
+                    {formatClock(elapsedSeconds(session, now))}
+                  </p>
+                  <p className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
+                    <InfinityIcon className="size-3" /> Main Sepuasnya
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p
+                    className={cn(
+                      "timer-digits text-2xl",
+                      status === "timeup" ? "text-destructive" : "text-primary",
+                    )}
+                  >
+                    {formatClock(Math.max(0, remainingSeconds(session, now)))}
+                  </p>
+                  <p className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
+                    <Clock className="size-3" /> Paket {session.durationMin} menit
+                  </p>
+                </>
               )}
-            >
-              {formatClock(Math.max(0, remainingSeconds(session, now)))}
-            </p>
-            <p className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
-              <Clock className="size-3" /> Paket {session.durationMin} menit
-            </p>
+            </div>
+            {allow("sesi.jeda") && (
+              <Button
+                size="icon"
+                variant={isPaused(session) ? "default" : "outline"}
+                className="size-9 shrink-0"
+                title={isPaused(session) ? "Lanjutkan" : "Pause"}
+                aria-label={isPaused(session) ? "Lanjutkan" : "Pause"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isPaused(session)) resumeSession(station.id);
+                  else pauseSession(station.id);
+                }}
+              >
+                {isPaused(session) ? (
+                  <PlayCircle className="size-4" />
+                ) : (
+                  <Pause className="size-4" />
+                )}
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -223,36 +249,34 @@ export function StationCard({
       </div>
 
       {session && (
-        <div className="mt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
-          <div className="grid grid-cols-3 gap-1">
-            <Button size="sm" variant="secondary" className="px-1 text-xs" onClick={() => onClick("timer")}>
-              <Timer className="size-3.5" /> Timer
-            </Button>
-            <Button size="sm" variant="secondary" className="px-1 text-xs" onClick={() => onClick("order")}>
-              <Utensils className="size-3.5" /> Order
-            </Button>
-            <Button size="sm" variant="secondary" className="px-1 text-xs" onClick={() => onClick("payment")}>
-              <Wallet className="size-3.5" /> Payment
-            </Button>
-          </div>
-          {!allow("sesi.jeda") ? null : isPaused(session) ? (
-            <Button
-              size="sm"
-              className="w-full"
-              onClick={() => resumeSession(station.id)}
-            >
-              <PlayCircle className="size-4" /> Lanjutkan
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full"
-              onClick={() => pauseSession(station.id)}
-            >
-              <Pause className="size-4" /> Pause
-            </Button>
-          )}
+        <div
+          className="mt-3 grid grid-cols-2 gap-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Button
+            size="sm"
+            variant="secondary"
+            className="px-1 text-xs"
+            onClick={() => onClick("timer")}
+          >
+            <Timer className="size-3.5" /> Timer
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="px-1 text-xs"
+            onClick={() => onClick("order")}
+          >
+            <Utensils className="size-3.5" /> Order
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="col-span-2 px-1 text-xs"
+            onClick={() => onClick("payment")}
+          >
+            <Wallet className="size-3.5" /> Payment
+          </Button>
         </div>
       )}
     </div>
