@@ -40,7 +40,7 @@ const paused: Station = {
   session: { ...playing.session!, pausedAt: Date.now() - 60_000, customerName: "Sari" },
 };
 
-export const Route = createFileRoute("/_authenticated/__cardcheck")({
+export const Route = createFileRoute("/_authenticated/cardcheck")({
   ssr: false,
   component: () => (
     <div className="flex flex-wrap items-start gap-6 p-6">
