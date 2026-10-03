@@ -640,7 +640,7 @@ function StationDialogBody({
       }}
     />
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="top-[4vh] max-h-[92vh] translate-y-0 overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl">
             {station.name}
