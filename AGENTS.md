@@ -15,3 +15,4 @@
 - On app open while online, a device first pulls central changes since its last sync; rows changed centrally discard that device's stale queued edits (server wins). Offline uses the local cache. Logout keeps the cache. Why: stale devices overwrote live cashier data without costing a full re-download.
 - Each payment split carries the time it was received (`PaymentSplit.at`), and `shiftSummary` counts cash by that time, so money stays with the shift that received it even when the bill is closed in a later shift.
 - Closing a shift freezes its final figures into `CashShift.snapshot`; closed-shift reports read the snapshot and never recompute.
+- A component whose props can be empty must not return early before its hooks: keep a thin wrapper that returns null and renders a body component with non-null props, so hook count never changes. Why: `StationDialog` crashed the cashier screen with "Rendered fewer hooks than expected" when a TV panel closed.

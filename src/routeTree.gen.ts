@@ -17,7 +17,6 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAkunRouteImport } from './routes/_authenticated/akun'
 import { Route as AuthenticatedBackupRouteImport } from './routes/_authenticated/backup'
 import { Route as AuthenticatedBookingRouteImport } from './routes/_authenticated/booking'
-import { Route as AuthenticatedCardcheckRouteImport } from './routes/_authenticated/cardcheck'
 import { Route as AuthenticatedKafeRouteImport } from './routes/_authenticated/kafe'
 import { Route as AuthenticatedKartuRouteImport } from './routes/_authenticated/kartu'
 import { Route as AuthenticatedKasRouteImport } from './routes/_authenticated/kas'
@@ -78,11 +77,6 @@ const AuthenticatedBackupRoute = AuthenticatedBackupRouteImport.update({
 const AuthenticatedBookingRoute = AuthenticatedBookingRouteImport.update({
   id: '/booking',
   path: '/booking',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedCardcheckRoute = AuthenticatedCardcheckRouteImport.update({
-  id: '/cardcheck',
-  path: '/cardcheck',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedKafeRoute = AuthenticatedKafeRouteImport.update({
@@ -205,7 +199,6 @@ export interface FileRoutesByFullPath {
   '/akun': typeof AuthenticatedAkunRoute
   '/backup': typeof AuthenticatedBackupRoute
   '/booking': typeof AuthenticatedBookingRoute
-  '/cardcheck': typeof AuthenticatedCardcheckRoute
   '/kafe': typeof AuthenticatedKafeRoute
   '/kartu': typeof AuthenticatedKartuRoute
   '/kas': typeof AuthenticatedKasRoute
@@ -236,7 +229,6 @@ export interface FileRoutesByTo {
   '/akun': typeof AuthenticatedAkunRoute
   '/backup': typeof AuthenticatedBackupRoute
   '/booking': typeof AuthenticatedBookingRoute
-  '/cardcheck': typeof AuthenticatedCardcheckRoute
   '/kafe': typeof AuthenticatedKafeRoute
   '/kartu': typeof AuthenticatedKartuRoute
   '/kas': typeof AuthenticatedKasRoute
@@ -270,7 +262,6 @@ export interface FileRoutesById {
   '/_authenticated/akun': typeof AuthenticatedAkunRoute
   '/_authenticated/backup': typeof AuthenticatedBackupRoute
   '/_authenticated/booking': typeof AuthenticatedBookingRoute
-  '/_authenticated/cardcheck': typeof AuthenticatedCardcheckRoute
   '/_authenticated/kafe': typeof AuthenticatedKafeRoute
   '/_authenticated/kartu': typeof AuthenticatedKartuRoute
   '/_authenticated/kas': typeof AuthenticatedKasRoute
@@ -305,7 +296,6 @@ export interface FileRouteTypes {
     | '/akun'
     | '/backup'
     | '/booking'
-    | '/cardcheck'
     | '/kafe'
     | '/kartu'
     | '/kas'
@@ -336,7 +326,6 @@ export interface FileRouteTypes {
     | '/akun'
     | '/backup'
     | '/booking'
-    | '/cardcheck'
     | '/kafe'
     | '/kartu'
     | '/kas'
@@ -369,7 +358,6 @@ export interface FileRouteTypes {
     | '/_authenticated/akun'
     | '/_authenticated/backup'
     | '/_authenticated/booking'
-    | '/_authenticated/cardcheck'
     | '/_authenticated/kafe'
     | '/_authenticated/kartu'
     | '/_authenticated/kas'
@@ -464,13 +452,6 @@ declare module '@tanstack/react-router' {
       path: '/booking'
       fullPath: '/booking'
       preLoaderRoute: typeof AuthenticatedBookingRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/cardcheck': {
-      id: '/_authenticated/cardcheck'
-      path: '/cardcheck'
-      fullPath: '/cardcheck'
-      preLoaderRoute: typeof AuthenticatedCardcheckRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/kafe': {
@@ -634,7 +615,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAkunRoute: typeof AuthenticatedAkunRoute
   AuthenticatedBackupRoute: typeof AuthenticatedBackupRoute
   AuthenticatedBookingRoute: typeof AuthenticatedBookingRoute
-  AuthenticatedCardcheckRoute: typeof AuthenticatedCardcheckRoute
   AuthenticatedKafeRoute: typeof AuthenticatedKafeRoute
   AuthenticatedKartuRoute: typeof AuthenticatedKartuRoute
   AuthenticatedKasRoute: typeof AuthenticatedKasRoute
@@ -658,7 +638,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAkunRoute: AuthenticatedAkunRoute,
   AuthenticatedBackupRoute: AuthenticatedBackupRoute,
   AuthenticatedBookingRoute: AuthenticatedBookingRoute,
-  AuthenticatedCardcheckRoute: AuthenticatedCardcheckRoute,
   AuthenticatedKafeRoute: AuthenticatedKafeRoute,
   AuthenticatedKartuRoute: AuthenticatedKartuRoute,
   AuthenticatedKasRoute: AuthenticatedKasRoute,
