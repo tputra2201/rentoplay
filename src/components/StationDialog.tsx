@@ -693,46 +693,37 @@ function StationDialogBody({
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm font-medium">Bermain per Jam (bayar di muka)</p>
-              <Select value={packageId} onValueChange={(value) => { setPackageId(value); const item = packages.find((entry) => entry.id === value); if (item) setDuration(item.durationMin); }}>
+              {packages.some((item) => item.active) && (
+              <Select value={packageId} onValueChange={(value) => { setPackageId(value); const item = packages.find((entry) => entry.id === value); if (item) { setDuration(item.durationMin); setCustomDuration(String(item.durationMin / 60)); } }}>
                 <SelectTrigger><SelectValue placeholder="Pilih paket rental" /></SelectTrigger>
                 <SelectContent>{packages.filter((item) => item.active).map((item) => <SelectItem key={item.id} value={item.id}>{item.name} — {item.durationMin} menit</SelectItem>)}</SelectContent>
               </Select>
-              <div className="flex flex-wrap gap-2">
-                {DURATIONS.map((d) => (
-                  <Button
-                    key={d}
-                    size="sm"
-                    variant={duration === d ? "default" : "outline"}
-                    onClick={() => {
-                      setDuration(d);
-                      setCustomDuration("");
-                    }}
-                  >
-                    {d} mnt
-                  </Button>
-                ))}
+              )}
+              <div className="flex items-center gap-2">
+                <Label htmlFor="play-hours" className="shrink-0">Jam Main :</Label>
+                <Button type="button" size="sm" variant="outline" onClick={() => { const h = Math.max(0.5, (customDuration === "" ? duration / 60 : Number(customDuration) || 0) - 0.5); setCustomDuration(String(h)); setDuration(Math.round(h * 60)); }}>-</Button>
                 <Input
+                  id="play-hours"
                   type="number"
-                  min={1}
-                  placeholder="Menit lain"
-                  value={customDuration}
+                  min={0.5}
+                  step={0.5}
+                  value={customDuration === "" ? String(duration / 60) : customDuration}
                   onChange={(e) => {
                     setCustomDuration(e.target.value);
                     const v = Number(e.target.value);
-                    if (v > 0) setDuration(v);
+                    if (v > 0) setDuration(Math.round(v * 60));
                   }}
-                  className="h-8 w-28"
+                  className="h-8 w-20 text-center"
                 />
+                <Button type="button" size="sm" variant="outline" onClick={() => { const h = (customDuration === "" ? duration / 60 : Number(customDuration) || 0) + 0.5; setCustomDuration(String(h)); setDuration(Math.round(h * 60)); }}>+</Button>
+                <span className="text-sm text-muted-foreground">jam</span>
               </div>
               <div className="space-y-1.5 rounded-md border border-border p-3">
                 <Label htmlFor="bonus-min">Waktu ekstra (menit, boleh minus)</Label>
                 <div className="flex items-center gap-2">
-                  <Button type="button" size="sm" variant="outline" onClick={() => setBonus(String(bonusMin - 1))}>-1</Button>
                   <Input id="bonus-min" type="number" className="h-8 w-24 text-center" value={bonus} onChange={(e) => setBonus(e.target.value)} />
-                  <Button type="button" size="sm" variant="outline" onClick={() => setBonus(String(bonusMin + 1))}>+1</Button>
-                  {[2, 3, 5].map((m) => (
-                    <Button key={m} type="button" size="sm" variant="ghost" onClick={() => setBonus(String(m))}>+{m}</Button>
+                  {[-1, 0, 1].map((m) => (
+                    <Button key={m} type="button" size="sm" variant="outline" onClick={() => setBonus(String(m === 0 ? 0 : bonusMin + m))}>{m > 0 ? `+${m}` : m}</Button>
                   ))}
                 </div>
                 <p className="text-xs text-muted-foreground">Total waktu main: {Math.max(0, duration + bonusMin)} menit — tarif tetap dihitung {duration} menit.</p>
@@ -761,6 +752,7 @@ function StationDialogBody({
                   />
                 </div>
               </div>
+              <div className="space-y-1.5"><Label htmlFor="rental-notes">Catatan</Label><Input id="rental-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Permintaan pelanggan (opsional)" /></div>
 
               <Button
                 className="w-full"
@@ -773,23 +765,19 @@ function StationDialogBody({
               >
                 <Play className="size-4" /> Mulai Paket
               </Button>
+              <Button
+                variant="secondary"
+                className="w-full"
+                disabled={!allow("sesi.mulai")}
+                onClick={() => {
+                  if (!requireShift()) return;
+                  startSession(station.id, "open", 0, { customerName, customerPhone, member, ...(matchedCustomer ? { customerId: matchedCustomer.id } : {}), packageName: "Open Time", notes });
+                  toast.success(`${station.name} mulai Main Sepuasnya`);
+                }}
+              >
+                <InfinityIcon className="size-4" /> Mulai Main Sepuasnya
+              </Button>
             </div>
-
-            <Separator />
-
-            <Button
-              variant="secondary"
-              className="w-full"
-              disabled={!allow("sesi.mulai")}
-              onClick={() => {
-                if (!requireShift()) return;
-                startSession(station.id, "open", 0, { customerName, customerPhone, member, ...(matchedCustomer ? { customerId: matchedCustomer.id } : {}), packageName: "Open Time", notes });
-                toast.success(`${station.name} mulai Main Sepuasnya`);
-              }}
-            >
-              <InfinityIcon className="size-4" /> Mulai Main Sepuasnya
-            </Button>
-            <div className="space-y-1.5"><Label htmlFor="rental-notes">Catatan</Label><Input id="rental-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Permintaan pelanggan (opsional)" /></div>
           </div>
         ) : (
           <div className="space-y-5">
