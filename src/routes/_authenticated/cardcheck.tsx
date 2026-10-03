@@ -12,7 +12,7 @@ const playing: Station = {
   booth: "VIP",
   availability: "available",
   session: {
-    mode: "timer",
+    mode: "package",
     startAt: start,
     durationMin: 60,
     rate: 12000,
