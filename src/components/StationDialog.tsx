@@ -1063,7 +1063,9 @@ function StationDialogBody({
                     value={addonPick}
                     onValueChange={(v) => {
                       setAddonPick(v);
-                      setAddonMinutes("");
+                      setAddonMinutes(
+                        addonRentals.find((a) => a.id === v)?.mode === "hourly" ? "60" : "",
+                      );
                     }}
                   >
                     <SelectTrigger className="w-56" aria-label="Pilih additional rental">
@@ -1081,16 +1083,38 @@ function StationDialogBody({
                     </SelectContent>
                   </Select>
                   {addonRentals.find((a) => a.id === addonPick)?.mode === "hourly" && (
-                    <Input
-                      type="number"
-                      min={0}
-                      inputMode="numeric"
-                      className="w-40"
-                      aria-label="Durasi additional rental (menit)"
-                      placeholder="Durasi (menit)"
-                      value={addonMinutes}
-                      onChange={(e) => setAddonMinutes(e.target.value)}
-                    />
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Durasi :</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          setAddonMinutes(String(Math.max(30, (Number(addonMinutes) || 60) - 30)))
+                        }
+                      >
+                        -
+                      </Button>
+                      <Input
+                        type="number"
+                        min={30}
+                        step={30}
+                        inputMode="numeric"
+                        className="h-8 w-20 text-center"
+                        aria-label="Durasi additional rental (menit)"
+                        value={addonMinutes}
+                        onChange={(e) => setAddonMinutes(e.target.value)}
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setAddonMinutes(String((Number(addonMinutes) || 0) + 30))}
+                      >
+                        +
+                      </Button>
+                      <span className="text-sm text-muted-foreground">menit</span>
+                    </div>
                   )}
                   <Button
                     size="sm"
@@ -1116,8 +1140,7 @@ function StationDialogBody({
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Durasi dikosongkan = ikut lama sesi {unit}. Isi menitnya bila sewa tambahan lebih
-                  singkat, misal 60 menit.
+                  Durasi bisa diketik atau digeser per 30 menit; dikosongkan = ikut lama sesi {unit}.
                 </p>
                 {(session.addons ?? []).length > 0 && (
                   <ul className="mt-2 space-y-1">
@@ -1474,73 +1497,56 @@ function StationDialogBody({
               />
             )}
 
-            {/* Gabung tagihan: TV lain dan meja kafe dibayar dari panel ini. */}
-
-            <div className="space-y-2 rounded-lg bg-secondary/50 p-3">
-              {mergedParent ? (
-                <p className="text-sm text-muted-foreground">
-                  Tagihan {unit} ini digabung ke <strong>{mergedParent.name}</strong> — pembayarannya
-                  dilakukan dari panel {mergedParent.name}.
-                </p>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium">Gabung Tagihan</p>
-                    {allow("sesi.gabung") && (
-                      <Button type="button" size="sm" variant="outline" onClick={() => setMergeOpen(true)}>
-                        Gabung Tagihan
-                      </Button>
-                    )}
+            {/* Ringkasan tagihan yang digabung/dipindah — tombolnya di blok Tipe pembayaran. */}
+            {mergedParent ? (
+              <p className="text-sm text-muted-foreground">
+                Tagihan {unit} ini digabung ke <strong>{mergedParent.name}</strong> — pembayarannya
+                dilakukan dari panel {mergedParent.name}.
+              </p>
+            ) : transferredLines.length > 0 ? (
+              <div className="space-y-1 rounded-lg bg-secondary/50 p-3">
+                {transferredLines.map((line) => (
+                  <div key={line.id} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{line.name}</span>
+                    <span className="font-semibold">{formatRupiah(line.price * line.qty)}</span>
                   </div>
-                  {transferredLines.length > 0 ? (
-                    <div className="space-y-1">
-                      {transferredLines.map((line) => (
-                        <div key={line.id} className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">{line.name}</span>
-                          <span className="font-semibold">{formatRupiah(line.price * line.qty)}</span>
-                        </div>
-                      ))}
-                      <p className="text-xs text-muted-foreground">
-                        {unit} asalnya sudah kembali tersedia dan bisa dijual lagi. Untuk membatalkan,
-                        hapus barisnya di daftar pesanan.
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      Satukan tagihan {unit} lain, atau titipkan pesanan meja kafe ke {unit} ini. {unit} yang
-                      tagihannya dipindah langsung tersedia kembali.
-                    </p>
-                  )}
-
-                </>
-              )}
-            </div>
+                ))}
+              </div>
+            ) : null}
 
             {!isSettled && (
             <div className="space-y-2">
 
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm font-medium">Tipe pembayaran</p>
-                {activePayments.length > 1 && allow("sesi.split") && (
-                  <button
-                    type="button"
-                    className="text-xs text-primary underline-offset-2 hover:underline"
-                    onClick={() => {
-                      if (splitMode) {
-                        setSplitMode(false);
-                        setSplits([]);
-                      } else {
-                        setSplitMode(true);
-                        setSplits([
-                          { method: activePayments[0]?.name ?? "Cash", amount: String(payTarget) },
-                          { method: activePayments[1]?.name ?? "QRIS", amount: "0" },
-                        ]);
-                      }
-                    }}
-                  >
-                    {splitMode ? "Satu metode saja" : "Split Bill"}
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  {allow("sesi.gabung") && !mergedParent && (
+                    <Button type="button" size="sm" variant="outline" onClick={() => setMergeOpen(true)}>
+                      Gabung Tagihan
+                    </Button>
+                  )}
+                  {activePayments.length > 1 && allow("sesi.split") && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        if (splitMode) {
+                          setSplitMode(false);
+                          setSplits([]);
+                        } else {
+                          setSplitMode(true);
+                          setSplits([
+                            { method: activePayments[0]?.name ?? "Cash", amount: String(payTarget) },
+                            { method: activePayments[1]?.name ?? "QRIS", amount: "0" },
+                          ]);
+                        }
+                      }}
+                    >
+                      {splitMode ? "Satu metode saja" : "Split Bill"}
+                    </Button>
+                  )}
+                </div>
               </div>
               {activePayments.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
@@ -1706,25 +1712,36 @@ function StationDialogBody({
                 <Wallet className="size-4" />
                 {isSettled ? "Sudah Lunas" : `Bayar ${formatRupiah(payTarget)}`}
               </Button>
-              <Button
-                variant="destructive"
-                className="w-full"
-                disabled={!isSettled || !allow("sesi.akhiri")}
-                onClick={() => setConfirmEnd(true)}
-              >
-                <Square className="size-4" /> Akhiri Sesi
-              </Button>
+              {allow("sesi.void") ? (
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  onClick={() => {
+                    if (!requireShift()) return;
+                    setConfirmVoid(true);
+                  }}
+                >
+                  <Ban className="size-4" /> VOID Transaksi
+                </Button>
+              ) : (
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  disabled={!isSettled || !allow("sesi.akhiri")}
+                  onClick={() => setConfirmEnd(true)}
+                >
+                  <Square className="size-4" /> Akhiri Sesi
+                </Button>
+              )}
               {allow("sesi.void") && (
-              <Button
-                variant="destructive"
-                className="w-full sm:col-span-2"
-                onClick={() => {
-                  if (!requireShift()) return;
-                  setConfirmVoid(true);
-                }}
-              >
-                <Ban className="size-4" /> VOID Transaksi
-              </Button>
+                <Button
+                  variant="destructive"
+                  className="w-full sm:col-span-2"
+                  disabled={!isSettled || !allow("sesi.akhiri")}
+                  onClick={() => setConfirmEnd(true)}
+                >
+                  <Square className="size-4" /> Akhiri Sesi
+                </Button>
               )}
             </div>
             {!isSettled && (
