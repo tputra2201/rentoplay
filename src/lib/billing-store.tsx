@@ -4357,7 +4357,15 @@ export function BillingProvider({ children }: { children: ReactNode }) {
         }),
       moveSession: (fromStationId, toStationId, newConsole) => {
         if (fromStationId === toStationId) return false;
-        let moved = false;
+        {
+          const f = state.stations.find((s) => s.id === fromStationId);
+          const t = state.stations.find((s) => s.id === toStationId);
+          const r = newConsole ? state.rates[newConsole] : undefined;
+          if (!f?.session || !t || t.session) return false;
+          if (f.session.paidAt && typeof r === "number" && r < f.session.rate) return false;
+        }
+        // setState updater berjalan tertunda; hasil ditentukan dari pengecekan di atas.
+        let moved = true;
         update((prev) => {
           const from = prev.stations.find((s) => s.id === fromStationId);
           const to = prev.stations.find((s) => s.id === toStationId);
@@ -4385,7 +4393,14 @@ export function BillingProvider({ children }: { children: ReactNode }) {
       },
       moveCafeTable: (fromTableId, toTableId) => {
         if (fromTableId === toTableId) return false;
-        let moved = false;
+        {
+          const f = state.cafeTables.find((t) => t.id === fromTableId);
+          const t = state.cafeTables.find((x) => x.id === toTableId);
+          if (!f || !t) return false;
+          if (!f.openedAt && f.orders.length === 0) return false;
+          if (t.openedAt || t.orders.length > 0) return false;
+        }
+        let moved = true;
         update((prev) => {
           const from = prev.cafeTables.find((t) => t.id === fromTableId);
           const to = prev.cafeTables.find((t) => t.id === toTableId);
