@@ -5,6 +5,12 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -92,6 +98,21 @@ function KafePage() {
       return byCategory || a.name.localeCompare(b.name, "id", { numeric: true });
     });
   }, [menu, menuOrderMode]);
+  const menuGroups = useMemo(() => {
+    const knownCategories = new Set(menuCategories);
+    const extraCategories = orderedMenu
+      .map((item) => item.category)
+      .filter((category) => category && !knownCategories.has(category));
+    const categories = [...menuCategories, ...new Set(extraCategories)];
+    const groups = categories.map((category) => ({
+      category,
+      items: orderedMenu.filter((item) => item.category === category),
+    }));
+    const uncategorized = orderedMenu.filter((item) => !item.category);
+    return uncategorized.length > 0
+      ? [...groups, { category: "Tanpa Kategori", items: uncategorized }]
+      : groups;
+  }, [menuCategories, orderedMenu]);
 
   return (
     <div className="space-y-8">
@@ -306,50 +327,67 @@ function KafePage() {
           description="Klik tombol detail untuk mengatur harga, diskon, printer label, dan modifier tiap menu."
         />
 
-        <SetupTable<MenuItem>
-          items={orderedMenu}
-          getId={(m) => m.id}
-          getLabel={(m) => m.name}
-          detailWide
-          onReorder={(a, b, orderedIds) => reorderList("menu", a, b, orderedIds)}
-          columns={[
-            {
-              key: "name",
-              header: "Nama Menu",
-              render: (m) => (
-                <span className="font-bold text-foreground">{m.name}</span>
-              ),
-            },
-            {
-              key: "category",
-              header: "Kategori",
-              hideOnMobile: true,
-              render: (m) => m.category || "—",
-            },
-            {
-              key: "price",
-              header: "Harga",
-              render: (m) => formatRupiah(m.price),
-            },
-            {
-              key: "label",
-              header: "Label",
-              hideOnMobile: true,
-              render: (m) =>
-                m.printEnabled !== false ? (
-                  <span className="text-accent">Cetak</span>
-                ) : (
-                  <span className="text-muted-foreground">Tidak</span>
-                ),
-            },
-          ]}
-          onRemove={(m) => {
-            removeMenuItem(m.id);
-            toast.success(`${m.name} dihapus`);
-          }}
-          detailTitle={(m) => m.name}
-          detailDescription={() => "Semua pengaturan menu ini."}
-          renderDetail={(m) => (
+        <Accordion
+          type="multiple"
+          defaultValue={menuGroups[0] ? [menuGroups[0].category] : []}
+          className="mt-4 space-y-2"
+        >
+          {menuGroups.map(({ category, items }) => (
+            <AccordionItem
+              key={category}
+              value={category}
+              className="overflow-hidden rounded-md border border-border px-3"
+            >
+              <AccordionTrigger className="py-3 hover:no-underline">
+                <span className="flex min-w-0 items-center gap-2 text-left">
+                  <span className="truncate font-bold text-foreground">{category}</span>
+                  <span className="shrink-0 text-xs font-normal text-muted-foreground">
+                    {items.length} menu
+                  </span>
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="pb-3">
+                <SetupTable<MenuItem>
+                  items={items}
+                  getId={(m) => m.id}
+                  getLabel={(m) => m.name}
+                  detailWide
+                  emptyText="Belum ada menu di kategori ini."
+                  onReorder={(a, b, orderedIds) =>
+                    reorderList("menu", a, b, orderedIds)
+                  }
+                  columns={[
+                    {
+                      key: "name",
+                      header: "Nama Menu",
+                      render: (m) => (
+                        <span className="font-bold text-foreground">{m.name}</span>
+                      ),
+                    },
+                    {
+                      key: "price",
+                      header: "Harga",
+                      render: (m) => formatRupiah(m.price),
+                    },
+                    {
+                      key: "label",
+                      header: "Label",
+                      hideOnMobile: true,
+                      render: (m) =>
+                        m.printEnabled !== false ? (
+                          <span className="text-accent">Cetak</span>
+                        ) : (
+                          <span className="text-muted-foreground">Tidak</span>
+                        ),
+                    },
+                  ]}
+                  onRemove={(m) => {
+                    removeMenuItem(m.id);
+                    toast.success(`${m.name} dihapus`);
+                  }}
+                  detailTitle={(m) => m.name}
+                  detailDescription={() => "Semua pengaturan menu ini."}
+                  renderDetail={(m) => (
             <>
               <DetailField label="Nama menu">
                 <Input
@@ -476,9 +514,13 @@ function KafePage() {
                   }
                 />
               </DetailField>
-            </>
-          )}
-        />
+                    </>
+                  )}
+                />
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
 
         <form
           className="mt-4 grid gap-2 sm:grid-cols-[1fr_180px_140px_auto]"
