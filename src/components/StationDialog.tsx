@@ -980,38 +980,27 @@ function StationDialogBody({
             </div>
 
 
-            <div className="flex flex-wrap gap-2">
-              {[30, 60, -30, -60]
-                .filter((m) =>
-                  m > 0 ? allow("sesi.tambahwaktu") : allow("sesi.kurangiwaktu"),
-                )
-                .map((m) => (
-                <Button
-                  key={m}
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    confirmAction({
-                      title: `${m > 0 ? "Tambah" : "Kurangi"} ${Math.abs(m)} menit?`,
-                      description:
-                        m > 0
-                          ? `Waktu main ${station.name} ditambah ${m} menit dan tagihan ikut bertambah.`
-                          : `Waktu main ${station.name} dikurangi ${Math.abs(m)} menit dan tagihan ikut berkurang.`,
-                      actionLabel: m > 0 ? "Tambah" : "Kurangi",
-                      destructive: m < 0,
-                      onConfirm: () => {
-                        addTime(station.id, m);
-                        toast.success(
-                          `${m > 0 ? "Tambah" : "Kurangi"} ${Math.abs(m)} menit di ${station.name}`,
-                        );
-                      },
-                    });
-                  }}
-                >
-                  <Timer className="size-4" /> {m > 0 ? `+${m}` : m} mnt
-                </Button>
-              ))}
-            </div>
+            {(allow("sesi.tambahwaktu") || allow("sesi.kurangiwaktu")) && (
+              <PlayHoursAdjuster
+                canAdd={allow("sesi.tambahwaktu")}
+                canReduce={allow("sesi.kurangiwaktu")}
+                onApply={(m) => {
+                  confirmAction({
+                    title: `${m > 0 ? "Tambah" : "Kurangi"} ${Math.abs(m) / 60} jam?`,
+                    description:
+                      m > 0
+                        ? `Waktu main ${station.name} ditambah ${m / 60} jam dan tagihan ikut bertambah.`
+                        : `Waktu main ${station.name} dikurangi ${Math.abs(m) / 60} jam dan tagihan ikut berkurang.`,
+                    actionLabel: m > 0 ? "Tambah" : "Kurangi",
+                    destructive: m < 0,
+                    onConfirm: () => {
+                      addTime(station.id, m);
+                      toast.success(`${m > 0 ? "Tambah" : "Kurangi"} ${Math.abs(m) / 60} jam di ${station.name}`);
+                    },
+                  });
+                }}
+              />
+            )}
 
             {session.mode === "prepaid" && allow("sesi.ekstra") && (
               <div className="space-y-2 rounded-md border border-border p-3">
@@ -1020,7 +1009,7 @@ function StationDialogBody({
                   <span className="text-sm text-accent">{(session.bonusMin ?? 0) >= 0 ? "+" : ""}{session.bonusMin ?? 0} mnt</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {[-15, -10, -5, -1, 1, 5, 10, 15, 30].map((m) => (
+                  {[-1, 1].map((m) => (
                     <Button
                       key={m}
                       size="sm"
