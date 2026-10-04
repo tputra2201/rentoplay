@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatRupiah, shiftSummary, useBilling } from "@/lib/billing-store";
+import { formatRupiah, pendingPaymentRecords, shiftSummary, useBilling } from "@/lib/billing-store";
 import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/_authenticated/shift")({
@@ -67,6 +67,8 @@ function ShiftPage() {
     openShift,
     closeShift,
     activeBusinessDay,
+    stations,
+    cafeTables,
   } = useBilling();
   const { fullName, user, role } = useAuth();
 
@@ -119,7 +121,12 @@ function ShiftPage() {
       {active ? (
         <CloseOutForm
           shift={active}
-          summary={shiftSummary(active, history, cashEntries, now)}
+          summary={shiftSummary(
+            active,
+            [...history, ...pendingPaymentRecords({ stations, cafeTables, history })],
+            cashEntries,
+            now,
+          )}
           onClose={closeShift}
         />
       ) : (
