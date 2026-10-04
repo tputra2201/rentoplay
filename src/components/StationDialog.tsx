@@ -135,6 +135,7 @@ function StationDialogBody({
     addOrder,
     removeOrder,
     setStationConsole,
+    changeSessionConsole,
     paymentMethods,
     packages,
     defaultBonusMin,
@@ -910,6 +911,48 @@ function StationDialogBody({
                     Total jeda {formatClock(Math.floor(pausedMsTotal(session, now) / 1000))}
                   </p>
                 )}
+                <div className="mt-2 flex w-full items-center justify-center gap-2">
+                  <span className="text-sm font-medium">Ganti konsol</span>
+                  <Select
+                    value={station.console}
+                    onValueChange={(c) => {
+                      const nextRate = rates[c] ?? 0;
+                      const oldRate = session.rate;
+                      const paid = Boolean(session.paidAt);
+                      if (paid && nextRate < oldRate) {
+                        toast.error("Tidak bisa pindah ke tarif lebih murah", { description: "Tagihan sesi ini sudah lunas." });
+                        return;
+                      }
+                      const extra = Math.round(rentalTotal({ ...session, rate: nextRate }, now) - rentalTotal(session, now));
+                      const diffText = extra >= 0 ? `bertambah ${formatRupiah(extra)}` : `berkurang ${formatRupiah(-extra)}`;
+                      confirmAction({
+                        title: `Ganti konsol ke ${c}?`,
+                        description: paid
+                          ? `Tarif ${formatRupiah(oldRate)}/jam → ${formatRupiah(nextRate)}/jam. Tagihan sudah lunas, selisih biaya sewa saat ini ${formatRupiah(extra)} menjadi tagihan baru yang harus dibayar.`
+                          : `Tarif ${formatRupiah(oldRate)}/jam → ${formatRupiah(nextRate)}/jam. Biaya sewa saat ini ${diffText} dan seterusnya mengikuti tarif baru.`,
+                        actionLabel: "Ganti Konsol",
+                        onConfirm: () => {
+                          const r = changeSessionConsole(station.id, c as ConsoleType);
+                          if (r === "ok") toast.success(`Konsol ${station.name} diganti ke ${c}`);
+                          else if (r === "downgrade-paid") toast.error("Tidak bisa pindah ke tarif lebih murah", { description: "Tagihan sesi ini sudah lunas." });
+                          else toast.error("Gagal ganti konsol");
+                        },
+                      });
+                    }}
+                  >
+                    <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {consoleTypes.map((c) => {
+                        const blocked = Boolean(session.paidAt) && (rates[c] ?? 0) < session.rate;
+                        return (
+                          <SelectItem key={c} value={c} disabled={blocked}>
+                            {c} · {formatRupiah(rates[c] ?? 0)}/jam{blocked ? " (lunas)" : ""}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="mt-2 flex w-full flex-wrap items-center justify-center gap-2">
                   <Select value={moveTo} onValueChange={setMoveTo}>
                     <SelectTrigger className="w-40">
