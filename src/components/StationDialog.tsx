@@ -1932,3 +1932,21 @@ function PlayHoursAdjuster({
     </div>
   );
 }
+
+function ActiveBonusInput({ onApply }: { onApply: (deltaMin: number) => void }) {
+  const [value, setValue] = useState("0");
+  const num = Math.round(Number(value) || 0);
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Input type="number" className="h-8 w-24 text-center" value={value} onChange={(e) => setValue(e.target.value)} />
+      {[-1, 0, 1].map((m) => (
+        <Button key={m} type="button" size="sm" variant="outline" onClick={() => setValue(String(m === 0 ? 0 : num + m))}>
+          {m > 0 ? `+${m}` : m}
+        </Button>
+      ))}
+      <Button type="button" size="sm" disabled={num === 0} onClick={() => { onApply(num); setValue("0"); }}>
+        Terapkan
+      </Button>
+    </div>
+  );
+}
