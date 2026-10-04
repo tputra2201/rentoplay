@@ -1969,6 +1969,8 @@ type Ctx = State & {
   removeOrder: (stationId: string, orderId: string) => void;
   setRates: (rates: Rates) => void;
   setStationConsole: (stationId: string, console: ConsoleType) => void;
+  /** Ganti konsol sesi berjalan; tarif ikut berubah. Sesi lunas hanya boleh naik tarif (selisih jadi tagihan baru). */
+  changeSessionConsole: (stationId: string, console: ConsoleType) => "ok" | "downgrade-paid" | "invalid";
   addConsoleType: (name: string, rate: number) => boolean;
   renameConsoleType: (oldName: string, newName: string) => boolean;
   setConsoleRate: (name: string, rate: number) => void;
@@ -2347,6 +2349,10 @@ const LOG_DESCRIBERS: Record<string, LogDescriber> = {
     action: "Ubah unit TV",
     detail: `${nameById(s.stations, a[0])} · ${patchText(a[1])}`,
     coalesce: true,
+  }),
+  changeSessionConsole: (a, s) => ({
+    action: "Ganti konsol sesi berjalan",
+    detail: `${nameById(s.stations, a[0])} → ${txt(a[1])}`,
   }),
   setStationConsole: (a, s) => ({
     action: "Ubah konsol unit TV",
@@ -3554,6 +3560,24 @@ export function BillingProvider({ children }: { children: ReactNode }) {
         ),
       setStationConsole: (stationId, consoleType) =>
         mapStation(stationId, (s) => ({ ...s, console: consoleType })),
+      changeSessionConsole: (stationId, consoleType) => {
+        const st = state.stations.find((s) => s.id === stationId);
+        const nextRate = state.rates[consoleType];
+        if (!st?.session || typeof nextRate !== "number" || st.console === consoleType) return "invalid";
+        if (st.session.paidAt && nextRate < st.session.rate) return "downgrade-paid";
+        update((prev) => ({
+          ...prev,
+          stations: prev.stations.map((s) => {
+            if (s.id !== stationId || !s.session) return s;
+            const raise = nextRate > s.session.rate;
+            // Lunas + naik tarif: buka lagi tagihan; historyId dipertahankan agar nota yang sama diperbarui.
+            const { paidAt, ...rest } = s.session;
+            const session = paidAt && raise ? { ...rest, rate: nextRate } : { ...s.session, rate: nextRate };
+            return { ...s, console: consoleType, session };
+          }),
+        }));
+        return "ok";
+      },
       addConsoleType: (name, rate) => {
         const clean = name.trim();
         if (!clean) return false;
@@ -4339,16 +4363,20 @@ export function BillingProvider({ children }: { children: ReactNode }) {
           const to = prev.stations.find((s) => s.id === toStationId);
           if (!from?.session || !to || to.session) return prev;
           const nextRate = newConsole ? prev.rates[newConsole] : undefined;
-          const session =
-            newConsole && typeof nextRate === "number"
-              ? { ...from.session, console: newConsole, rate: nextRate }
-              : from.session;
+          if (from.session.paidAt && typeof nextRate === "number" && nextRate < from.session.rate) return prev;
+          let session = from.session;
+          if (newConsole && typeof nextRate === "number") {
+            const { paidAt, ...rest } = from.session;
+            session = paidAt && nextRate > from.session.rate
+              ? { ...rest, rate: nextRate }
+              : { ...from.session, rate: nextRate };
+          }
           moved = true;
           return {
             ...prev,
             stations: prev.stations.map((s) => {
               if (s.id === fromStationId) return { ...s, session: null };
-              if (s.id === toStationId) return { ...s, session };
+              if (s.id === toStationId) return { ...s, ...(newConsole && typeof nextRate === "number" ? { console: newConsole } : {}), session };
               return s;
             }),
           };
