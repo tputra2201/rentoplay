@@ -1424,20 +1424,22 @@ export type ShiftSummary = {
  * sehingga belum punya nota. Dipakai saat Close Out agar uang itu ikut
  * dikunci di shift penerimanya.
  */
-function pendingPaymentRecords(state: {
-  stations: { id: string; name: string; console?: string; session?: { historyId?: string; settlements?: Settlement[] } | null }[];
-  cafeTables?: { id: string; name: string; historyId?: string; settlements?: Settlement[] }[];
+export function pendingPaymentRecords(state: {
+  stations: { id: string; name: string; console?: string; session?: { historyId?: string; paidAt?: number; settlements?: Settlement[] } | null }[];
+  cafeTables?: { id: string; name: string; historyId?: string; paidAt?: number; settlements?: Settlement[] }[];
   history: HistoryRecord[];
 }): HistoryRecord[] {
   const known = new Set(state.history.map((h) => h.id));
   const groups = [
-    ...state.stations.map((s) => ({ id: s.id, name: s.name, historyId: s.session?.historyId, settlements: s.session?.settlements })),
-    ...(state.cafeTables ?? []).map((t) => ({ id: t.id, name: t.name, historyId: t.historyId, settlements: t.settlements })),
+    ...state.stations.map((s) => ({ id: s.id, name: s.name, historyId: s.session?.historyId, paidAt: s.session?.paidAt, settlements: s.session?.settlements })),
+    ...(state.cafeTables ?? []).map((t) => ({ id: t.id, name: t.name, historyId: t.historyId, paidAt: t.paidAt, settlements: t.settlements })),
   ];
   const out: HistoryRecord[] = [];
   for (const g of groups) {
     if (!g.settlements?.length) continue;
     if (g.historyId && known.has(g.historyId)) continue;
+    // Sudah lunas: notanya sudah ada di riwayat dengan seluruh pembayaran.
+    if (g.paidAt) continue;
     const payments = g.settlements.flatMap((s) => settlementSplits(s));
     const last = g.settlements[g.settlements.length - 1]!.at;
     out.push({
