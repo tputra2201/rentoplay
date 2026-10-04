@@ -91,6 +91,7 @@ export function OrderSelectionActions({
     activeMethods[0]?.name ??
     "Cash";
   const payMethod = method || cashMethodName;
+  const isCard = payMethod === CARD_PAYMENT_NAME;
   const card = isCard ? findCardByNumber(playingCards, cardNumber) : undefined;
 
   const bill = cafeBill(
