@@ -156,7 +156,7 @@ export function CafeTables({ allowDelete = false }: { allowDelete?: boolean }) {
 
   // Setiap kali meja lain dibuka atau dialog ditutup, form kembali kosong.
   useEffect(() => {
-    setPayMethod("");
+    setPayMethod(cashMethodName);
     setReceived("");
     setPayAmount("");
     setCardNumber("");
@@ -174,6 +174,12 @@ export function CafeTables({ allowDelete = false }: { allowDelete?: boolean }) {
 
   const activeMethods = paymentMethods.filter((p) => p.active);
   const otherMethods = activeMethods.filter((m) => m.name !== CARD_PAYMENT_NAME);
+  // Tipe pembayaran bawaan = tunai. Namanya bebas dikustomisasi tiap toko,
+  // jadi dikenali dari kata "tunai"/"cash"/"uang", bukan dari ID tetap.
+  const cashMethodName =
+    activeMethods.find((m) => /^(tunai|cash|uang)\b/i.test(m.name.trim()))?.name ??
+    activeMethods[0]?.name ??
+    "";
   const table = cafeTables.find((t) => t.id === openId) ?? null;
   const pickedOrders = (table?.orders ?? []).filter((o) => pickedIds.includes(o.id));
 
@@ -220,7 +226,9 @@ export function CafeTables({ allowDelete = false }: { allowDelete?: boolean }) {
   const restMethod = restPay || otherMethods[0]?.name || "Cash";
 
 
-  const receivedValue = Number(received) || 0;
+  // Belum diketik = uang diterima dianggap sesuai sisa tagihan sekarang.
+  const receivedValue =
+    received === "" ? payTarget : Math.max(0, Number(received) || 0);
   const change = Math.max(0, receivedValue - payTarget);
   const shortage = Math.max(0, payTarget - receivedValue);
 
@@ -443,7 +451,7 @@ export function CafeTables({ allowDelete = false }: { allowDelete?: boolean }) {
       return;
     }
 
-    const paid = received === "" ? payTarget : receivedValue;
+    const paid = receivedValue;
     if (paid + 0.5 < payTarget) {
       toast.error("Uang diterima kurang dari total tagihan");
       return;
@@ -460,7 +468,7 @@ export function CafeTables({ allowDelete = false }: { allowDelete?: boolean }) {
   /** Klik kartu meja langsung membuka panel pesanan & pembayaran meja itu. */
   const openTablePanel = (t: CafeTable) => {
     setOpenId(t.id);
-    setPayMethod(activeMethods[0]?.name ?? "");
+    setPayMethod(cashMethodName);
     setReceived("");
     if (!t.customerName?.trim()) {
       updateCafeTable(t.id, { customerName: "Umum" });
