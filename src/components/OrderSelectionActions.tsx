@@ -85,8 +85,12 @@ export function OrderSelectionActions({
   const [target, setTarget] = useState("");
 
   const activeMethods = paymentMethods.filter((p) => p.active);
-  const payMethod = method || activeMethods[0]?.name || "Cash";
-  const isCard = payMethod === CARD_PAYMENT_NAME;
+  // Bawaan = tunai (nama metode bebas dikustomisasi tiap toko).
+  const cashMethodName =
+    activeMethods.find((m) => /^(tunai|cash|uang)\b/i.test(m.name.trim()))?.name ??
+    activeMethods[0]?.name ??
+    "Cash";
+  const payMethod = method || cashMethodName;
   const card = isCard ? findCardByNumber(playingCards, cardNumber) : undefined;
 
   const bill = cafeBill(
