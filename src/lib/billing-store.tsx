@@ -4363,16 +4363,20 @@ export function BillingProvider({ children }: { children: ReactNode }) {
           const to = prev.stations.find((s) => s.id === toStationId);
           if (!from?.session || !to || to.session) return prev;
           const nextRate = newConsole ? prev.rates[newConsole] : undefined;
-          const session =
-            newConsole && typeof nextRate === "number"
-              ? { ...from.session, console: newConsole, rate: nextRate }
-              : from.session;
+          if (from.session.paidAt && typeof nextRate === "number" && nextRate < from.session.rate) return prev;
+          let session = from.session;
+          if (newConsole && typeof nextRate === "number") {
+            const { paidAt, ...rest } = from.session;
+            session = paidAt && nextRate > from.session.rate
+              ? { ...rest, rate: nextRate }
+              : { ...from.session, rate: nextRate };
+          }
           moved = true;
           return {
             ...prev,
             stations: prev.stations.map((s) => {
               if (s.id === fromStationId) return { ...s, session: null };
-              if (s.id === toStationId) return { ...s, session };
+              if (s.id === toStationId) return { ...s, ...(newConsole && typeof nextRate === "number" ? { console: newConsole } : {}), session };
               return s;
             }),
           };
