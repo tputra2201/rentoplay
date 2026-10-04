@@ -4384,7 +4384,9 @@ export function BillingProvider({ children }: { children: ReactNode }) {
             ...prev,
             stations: prev.stations.map((s) => {
               if (s.id === fromStationId) return { ...s, session: null };
-              if (s.id === toStationId) return { ...s, ...(newConsole && typeof nextRate === "number" ? { console: newConsole } : {}), session };
+              // Konsol ikut pindah bersama sesi: unit tujuan memakai konsol baru (jika dipilih) atau konsol unit asal.
+              if (s.id === toStationId)
+                return { ...s, console: newConsole && typeof nextRate === "number" ? newConsole : from.console, session };
               return s;
             }),
           };
