@@ -1892,3 +1892,52 @@ function StationDialogBody({
 
   );
 }
+
+function PlayHoursAdjuster({
+  canAdd,
+  canReduce,
+  onApply,
+}: {
+  canAdd: boolean;
+  canReduce: boolean;
+  onApply: (minutes: number) => void;
+}) {
+  const [hours, setHours] = useState(1);
+  const step = (d: number) => setHours((h) => Math.max(0.5, Math.round((h + d) * 2) / 2));
+  const minutes = Math.round(hours * 60);
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Label htmlFor="adjust-hours" className="shrink-0">Jam Main :</Label>
+        <Button type="button" size="icon" variant="outline" onClick={() => step(-0.5)}>−</Button>
+        <Input
+          id="adjust-hours"
+          type="number"
+          inputMode="decimal"
+          min={0.5}
+          step={0.5}
+          value={hours}
+          onChange={(e) => {
+            const v = parseFloat(e.target.value);
+            setHours(Number.isFinite(v) && v > 0 ? v : 0.5);
+          }}
+          className="w-20 text-center"
+        />
+        <Button type="button" size="icon" variant="outline" onClick={() => step(0.5)}>+</Button>
+        <span className="text-sm text-muted-foreground">jam</span>
+      </div>
+      <div className="flex gap-2">
+        {canAdd && (
+          <Button size="sm" variant="outline" className="flex-1" onClick={() => onApply(minutes)}>
+            <Timer className="size-4" /> Tambah
+          </Button>
+        )}
+        {canReduce && (
+          <Button size="sm" variant="outline" className="flex-1" onClick={() => onApply(-minutes)}>
+            <Timer className="size-4" /> Kurangi
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
