@@ -980,38 +980,27 @@ function StationDialogBody({
             </div>
 
 
-            <div className="flex flex-wrap gap-2">
-              {[30, 60, -30, -60]
-                .filter((m) =>
-                  m > 0 ? allow("sesi.tambahwaktu") : allow("sesi.kurangiwaktu"),
-                )
-                .map((m) => (
-                <Button
-                  key={m}
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    confirmAction({
-                      title: `${m > 0 ? "Tambah" : "Kurangi"} ${Math.abs(m)} menit?`,
-                      description:
-                        m > 0
-                          ? `Waktu main ${station.name} ditambah ${m} menit dan tagihan ikut bertambah.`
-                          : `Waktu main ${station.name} dikurangi ${Math.abs(m)} menit dan tagihan ikut berkurang.`,
-                      actionLabel: m > 0 ? "Tambah" : "Kurangi",
-                      destructive: m < 0,
-                      onConfirm: () => {
-                        addTime(station.id, m);
-                        toast.success(
-                          `${m > 0 ? "Tambah" : "Kurangi"} ${Math.abs(m)} menit di ${station.name}`,
-                        );
-                      },
-                    });
-                  }}
-                >
-                  <Timer className="size-4" /> {m > 0 ? `+${m}` : m} mnt
-                </Button>
-              ))}
-            </div>
+            {(allow("sesi.tambahwaktu") || allow("sesi.kurangiwaktu")) && (
+              <PlayHoursAdjuster
+                canAdd={allow("sesi.tambahwaktu")}
+                canReduce={allow("sesi.kurangiwaktu")}
+                onApply={(m) => {
+                  confirmAction({
+                    title: `${m > 0 ? "Tambah" : "Kurangi"} ${Math.abs(m) / 60} jam?`,
+                    description:
+                      m > 0
+                        ? `Waktu main ${station.name} ditambah ${m / 60} jam dan tagihan ikut bertambah.`
+                        : `Waktu main ${station.name} dikurangi ${Math.abs(m) / 60} jam dan tagihan ikut berkurang.`,
+                    actionLabel: m > 0 ? "Tambah" : "Kurangi",
+                    destructive: m < 0,
+                    onConfirm: () => {
+                      addTime(station.id, m);
+                      toast.success(`${m > 0 ? "Tambah" : "Kurangi"} ${Math.abs(m) / 60} jam di ${station.name}`);
+                    },
+                  });
+                }}
+              />
+            )}
 
             {session.mode === "prepaid" && allow("sesi.ekstra") && (
               <div className="space-y-2 rounded-md border border-border p-3">
@@ -1020,7 +1009,7 @@ function StationDialogBody({
                   <span className="text-sm text-accent">{(session.bonusMin ?? 0) >= 0 ? "+" : ""}{session.bonusMin ?? 0} mnt</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {[-15, -10, -5, -1, 1, 5, 10, 15, 30].map((m) => (
+                  {[-1, 1].map((m) => (
                     <Button
                       key={m}
                       size="sm"
@@ -1901,5 +1890,54 @@ function StationDialogBody({
     {confirmDialog}
     </>
 
+  );
+}
+
+function PlayHoursAdjuster({
+  canAdd,
+  canReduce,
+  onApply,
+}: {
+  canAdd: boolean;
+  canReduce: boolean;
+  onApply: (minutes: number) => void;
+}) {
+  const [hours, setHours] = useState(1);
+  const step = (d: number) => setHours((h) => Math.max(0.5, Math.round((h + d) * 2) / 2));
+  const minutes = Math.round(hours * 60);
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Label htmlFor="adjust-hours" className="shrink-0">Jam Main :</Label>
+        <Button type="button" size="icon" variant="outline" onClick={() => step(-0.5)}>−</Button>
+        <Input
+          id="adjust-hours"
+          type="number"
+          inputMode="decimal"
+          min={0.5}
+          step={0.5}
+          value={hours}
+          onChange={(e) => {
+            const v = parseFloat(e.target.value);
+            setHours(Number.isFinite(v) && v > 0 ? v : 0.5);
+          }}
+          className="w-20 text-center"
+        />
+        <Button type="button" size="icon" variant="outline" onClick={() => step(0.5)}>+</Button>
+        <span className="text-sm text-muted-foreground">jam</span>
+      </div>
+      <div className="flex gap-2">
+        {canAdd && (
+          <Button size="sm" variant="outline" className="flex-1" onClick={() => onApply(minutes)}>
+            <Timer className="size-4" /> Tambah
+          </Button>
+        )}
+        {canReduce && (
+          <Button size="sm" variant="outline" className="flex-1" onClick={() => onApply(-minutes)}>
+            <Timer className="size-4" /> Kurangi
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }
