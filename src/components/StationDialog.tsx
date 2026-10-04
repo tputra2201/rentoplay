@@ -1008,29 +1008,20 @@ function StationDialogBody({
                   <p className="text-sm font-medium">Waktu ekstra (tanpa biaya)</p>
                   <span className="text-sm text-accent">{(session.bonusMin ?? 0) >= 0 ? "+" : ""}{session.bonusMin ?? 0} mnt</span>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {[-1, 1].map((m) => (
-                    <Button
-                      key={m}
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        confirmAction({
-                          title: `Waktu ekstra ${m > 0 ? "+" : ""}${m} menit?`,
-                          description: `Tagihan ${station.name} tidak berubah, hanya waktu mainnya.`,
-                          actionLabel: "Terapkan",
-                          destructive: m < 0,
-                          onConfirm: () => {
-                            adjustBonusTime(station.id, m);
-                            toast.success(`Waktu ekstra ${m > 0 ? "+" : ""}${m} menit`, { description: "Tarif tidak berubah" });
-                          },
-                        });
-                      }}
-                    >
-                      {m > 0 ? `+${m}` : m}
-                    </Button>
-                  ))}
-                </div>
+                <ActiveBonusInput
+                  onApply={(m) => {
+                    confirmAction({
+                      title: `Waktu ekstra ${m > 0 ? "+" : ""}${m} menit?`,
+                      description: `Tagihan ${station.name} tidak berubah, hanya waktu mainnya.`,
+                      actionLabel: "Terapkan",
+                      destructive: m < 0,
+                      onConfirm: () => {
+                        adjustBonusTime(station.id, m);
+                        toast.success(`Waktu ekstra ${m > 0 ? "+" : ""}${m} menit`, { description: "Tarif tidak berubah" });
+                      },
+                    });
+                  }}
+                />
                 <p className="text-xs text-muted-foreground">Paket {session.durationMin} menit — total main {Math.max(0, session.durationMin + (session.bonusMin ?? 0))} menit.</p>
                 {remainingSeconds(session, now) <= 0 && (
                   <p className="text-xs text-warning">
@@ -1938,6 +1929,24 @@ function PlayHoursAdjuster({
           </Button>
         )}
       </div>
+    </div>
+  );
+}
+
+function ActiveBonusInput({ onApply }: { onApply: (deltaMin: number) => void }) {
+  const [value, setValue] = useState("0");
+  const num = Math.round(Number(value) || 0);
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Input type="number" className="h-8 w-24 text-center" value={value} onChange={(e) => setValue(e.target.value)} />
+      {[-1, 0, 1].map((m) => (
+        <Button key={m} type="button" size="sm" variant="outline" onClick={() => setValue(String(m === 0 ? 0 : num + m))}>
+          {m > 0 ? `+${m}` : m}
+        </Button>
+      ))}
+      <Button type="button" size="sm" disabled={num === 0} onClick={() => { onApply(num); setValue("0"); }}>
+        Terapkan
+      </Button>
     </div>
   );
 }
