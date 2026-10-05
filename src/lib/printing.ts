@@ -49,6 +49,8 @@ export type PrinterConfig = {
   marginMm: number;
   /** Jumlah salinan setiap kali mencetak. */
   copies: number;
+  /** Cutter milik perangkat, tidak tergantung lebar kertas. */
+  autoCut?: boolean;
   active: boolean;
   /** Pilihan isi label; nilai lama tanpa pengaturan memakai layout ringkas bawaan. */
   labelLayout?: Partial<LabelLayout>;
@@ -226,13 +228,18 @@ function toBase64(value: string) {
   return btoa(binary);
 }
 
-/** Satu akhir baris, dua baris kosong, lalu potong; tanpa feed setelah cutter. */
-export function thermalCutText(text: string) {
-  return `${text.replace(/[\r\n]+$/, "")}\n\n\n\x1d\x56\x00`;
+/** Feed-and-cut membawa baris terakhir melewati pisau sebelum dipotong. */
+export function thermalCutText(text: string, blankLines = 5) {
+  return `${text.replace(/[\r\n]+$/, "")}${"\n".repeat(blankLines + 1)}\x1d\x56\x42\x00`;
+}
+
+export function thermalBlankLines(printer: PrinterConfig) {
+  // Bill/struk: pertahankan tiga baris lama lalu tambahkan dua, bukan kurangi.
+  return printer.role === "kitchen" || printer.role === "bar" ? 1 : 5;
 }
 
 export function usesThermalCutter(printer: PrinterConfig) {
-  return printer.paper === "58mm" || printer.paper === "80mm";
+  return printer.autoCut ?? (printer.paper === "58mm" || printer.paper === "80mm");
 }
 
 /**
@@ -247,7 +254,7 @@ export function printViaRawBt(
   if (typeof window === "undefined") return false;
   const body = text.endsWith("\n") ? text : `${text}\n`;
   const tail = opts.trailingFeed === false ? "" : "\n\n\n";
-  const payload = usesThermalCutter(printer) ? thermalCutText(text) : `${body}${tail}`;
+  const payload = usesThermalCutter(printer) ? thermalCutText(text, thermalBlankLines(printer)) : `${body}${tail}`;
   window.location.href = `rawbt:base64,${toBase64(payload)}`;
   return true;
 }
@@ -271,7 +278,7 @@ export function printViaAndroid(printer: PrinterConfig, text: string) {
     );
     return false;
   }
-  const payload = usesThermalCutter(printer) ? thermalCutText(text) : text;
+  const payload = usesThermalCutter(printer) ? thermalCutText(text, thermalBlankLines(printer)) : text;
   window.BillingAndroid.printBase64(printer.bluetoothAddress, toBase64(payload));
   return true;
 }

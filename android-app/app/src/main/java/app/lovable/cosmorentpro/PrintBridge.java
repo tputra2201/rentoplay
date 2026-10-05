@@ -85,7 +85,7 @@ public final class PrintBridge {
             output.write(text.getBytes(PRINTER_CHARSET));
             // The web app supplies spacing + cut for thermal rolls. Never feed after cutting.
             // Preserve legacy behavior for sticker printers and older web clients.
-            if (!text.endsWith("\035V\000")) {
+            if (!text.endsWith("\035V\000") && !text.endsWith("\035VB\000")) {
                 output.write(new byte[]{0x0A, 0x0A, 0x0A});
             }
             output.flush();
