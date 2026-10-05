@@ -229,11 +229,14 @@ function toBase64(value: string) {
 /**
  * Kirim teks ESC/POS ke aplikasi RawBT (Android) untuk printer Bluetooth lama.
  * Payload dikirim sebagai base64 tanpa pengkodean ganda agar tidak "wrong base64".
+ * `trailingFeed: false` menghilangkan baris kosong ekstra di akhir — dipakai
+ * printer label (mis. kertas 40×30 mm) agar tidak membuang satu label kosong.
  */
-export function printViaRawBt(printer: PrinterConfig, text: string) {
+export function printViaRawBt(printer: PrinterConfig, text: string, opts?: { trailingFeed?: boolean }) {
   if (typeof window === "undefined") return false;
+  const feed = opts?.trailingFeed === false ? "" : "\n\n\n";
   const body = text.endsWith("\n") ? text : `${text}\n`;
-  window.location.href = `rawbt:base64,${toBase64(`${body}\n\n\n`)}`;
+  window.location.href = `rawbt:base64,${toBase64(`${body}${feed}`)}`;
   return true;
 }
 
