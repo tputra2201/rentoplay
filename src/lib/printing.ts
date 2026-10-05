@@ -226,6 +226,15 @@ function toBase64(value: string) {
   return btoa(binary);
 }
 
+/** Satu akhir baris, dua baris kosong, lalu potong; tanpa feed setelah cutter. */
+export function thermalCutText(text: string) {
+  return `${text.replace(/[\r\n]+$/, "")}\n\n\n\x1d\x56\x00`;
+}
+
+export function usesThermalCutter(printer: PrinterConfig) {
+  return printer.paper === "58mm" || printer.paper === "80mm";
+}
+
 /**
  * Kirim teks ESC/POS ke aplikasi RawBT (Android) untuk printer Bluetooth lama.
  * Payload dikirim sebagai base64 tanpa pengkodean ganda agar tidak "wrong base64".
@@ -238,7 +247,8 @@ export function printViaRawBt(
   if (typeof window === "undefined") return false;
   const body = text.endsWith("\n") ? text : `${text}\n`;
   const tail = opts.trailingFeed === false ? "" : "\n\n\n";
-  window.location.href = `rawbt:base64,${toBase64(`${body}${tail}`)}`;
+  const payload = usesThermalCutter(printer) ? thermalCutText(text) : `${body}${tail}`;
+  window.location.href = `rawbt:base64,${toBase64(payload)}`;
   return true;
 }
 
@@ -261,7 +271,8 @@ export function printViaAndroid(printer: PrinterConfig, text: string) {
     );
     return false;
   }
-  window.BillingAndroid.printBase64(printer.bluetoothAddress, toBase64(text));
+  const payload = usesThermalCutter(printer) ? thermalCutText(text) : text;
+  window.BillingAndroid.printBase64(printer.bluetoothAddress, toBase64(payload));
   return true;
 }
 

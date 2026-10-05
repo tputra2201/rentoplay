@@ -83,7 +83,11 @@ public final class PrintBridge {
             OutputStream output = socket.getOutputStream();
             output.write(new byte[]{0x1B, 0x40});
             output.write(text.getBytes(PRINTER_CHARSET));
-            output.write(new byte[]{0x0A, 0x0A, 0x0A});
+            // The web app supplies spacing + cut for thermal rolls. Never feed after cutting.
+            // Preserve legacy behavior for sticker printers and older web clients.
+            if (!text.endsWith("\u001D\u0056\u0000")) {
+                output.write(new byte[]{0x0A, 0x0A, 0x0A});
+            }
             output.flush();
             notifyPage(true, "Cetak berhasil dikirim ke " + safeName(device));
         } catch (Exception error) {
