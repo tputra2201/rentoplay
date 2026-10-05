@@ -10,7 +10,7 @@
  */
 
 import { toast } from "sonner";
-import type { PaperSize, PrinterConfig } from "./printing";
+import { thermalCutText, usesThermalCutter, type PaperSize, type PrinterConfig } from "./printing";
 
 export type DirectKind = "bluetooth" | "usb";
 
@@ -257,7 +257,6 @@ async function writerFor(printer: PrinterConfig, kind: DirectKind): Promise<Writ
 /* --------------------------------- ESC/POS --------------------------------- */
 
 const ESC = 0x1b;
-const GS = 0x1d;
 
 /** Ubah teks jadi byte ESC/POS lengkap dengan inisialisasi dan potong kertas. */
 export function escposBytes(text: string, opts: { bold?: boolean; cut?: boolean } = {}) {
@@ -274,9 +273,11 @@ export function escposBytes(text: string, opts: { bold?: boolean; cut?: boolean 
     0x45,
     opts.bold ? 1 : 0,
   ];
-  const body = latin(text.endsWith("\n") ? text : `${text}\n`);
-  const tail = [0x0a, 0x0a, 0x0a];
-  if (opts.cut !== false) tail.push(GS, 0x56, 0x00);
+  const cutting = opts.cut !== false;
+  const body = latin(cutting ? text.replace(/[\r\n]+$/, "") : text.endsWith("\n") ? text : `${text}\n`);
+  const tail = cutting
+    ? Array.from(thermalCutText(""), (ch) => ch.charCodeAt(0))
+    : [0x0a, 0x0a, 0x0a];
   return new Uint8Array([...head, ...body, ...tail]);
 }
 
@@ -298,7 +299,7 @@ function latin(text: string) {
 export async function printDirect(printer: PrinterConfig, kind: DirectKind, text: string) {
   try {
     const writer = await writerFor(printer, kind);
-    await writer.write(escposBytes(text, { bold: printer.bold, cut: printer.paper !== "40mm" }));
+    await writer.write(escposBytes(text, { bold: printer.bold, cut: usesThermalCutter(printer) }));
     toast.success(`Cetak dikirim ke ${writer.name}`);
     return true;
   } catch (error) {
