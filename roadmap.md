@@ -1,6 +1,6 @@
 # Roadmap
 
-- [x] Label, bill, dan struk thermal: dua baris kosong sebelum auto cutter; pertahankan perilaku printer stiker (payload teruji; hasil fisik menunggu printer pengguna).
+- [ ] Koreksi cetak Bluetooth: bill/struk mempertahankan jarak lama + dua baris; label satu baris + cutter terpisah dari ukuran kertas.
 
 - [x] 1. Data Store: hapus hint versi, Manager/Installer boleh ubah perangkat, wildcard IP `192.168.80.*`
 - [x] 2. Judul Setup & Report lebih tebal + warna aksen

@@ -28,6 +28,7 @@ import {
   PRINT_MODES,
   PRINT_MODE_LABEL,
   labelLayout,
+  usesThermalCutter,
   isAndroidPrintAvailable,
   pairedAndroidPrinters,
   type DocLayout,
@@ -419,6 +420,15 @@ function PrinterPage() {
               </div>
 
               <div className="flex flex-wrap gap-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <Switch
+                    checked={usesThermalCutter(p)}
+                    disabled={!canManage}
+                    onCheckedChange={(v) => updatePrinter(p.id, { autoCut: v })}
+                    aria-label={`Auto cutter ${p.name}`}
+                  />
+                  Auto cutter
+                </label>
                 <label className="flex items-center gap-2 text-sm">
                   <Switch
                     checked={p.bold}
