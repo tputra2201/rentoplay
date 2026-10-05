@@ -271,8 +271,13 @@ function labelTextLines(opts: {
   const lines: string[] = [];
   if (layout.showHeading) lines.push(textCenter(heading, width));
   if (layout.showSeparators) lines.push(textSep(width));
-  if (layout.showItemName) lines.push(item.name);
-  if (layout.showQuantity) lines.push(`x ${item.qty}`);
+  if (printer.paper === "40mm" && layout.showItemName && layout.showQuantity) {
+    // Label 40x30: nama + jumlah satu baris agar cetakan tidak melewati tinggi stiker.
+    lines.push(`${item.name} x${item.qty}`);
+  } else {
+    if (layout.showItemName) lines.push(item.name);
+    if (layout.showQuantity) lines.push(`x ${item.qty}`);
+  }
   if (layout.showNotes) lines.push(...[item.note, note].filter(Boolean) as string[]);
   if (layout.showSeparators) lines.push(textSep(width));
   if (layout.showSource && source) lines.push(source);
@@ -301,7 +306,10 @@ export function printLabels(opts: {
       )
       .join("\n\n");
     if (mode === "android") printViaAndroid(printer, textWithCopies(printer, text));
-    else if (mode === "rawbt") printViaRawBt(printer, textWithCopies(printer, text));
+    else if (mode === "rawbt")
+      printViaRawBt(printer, textWithCopies(printer, text), {
+        trailingFeed: printer.paper !== "40mm",
+      });
     else void printDirect(printer, mode, textWithCopies(printer, text));
     return;
   }
