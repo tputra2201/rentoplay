@@ -263,10 +263,10 @@ export function printViaAndroid(printer: PrinterConfig, text: string) {
   return true;
 }
 
-/** Ulangi teks sesuai jumlah salinan printer. */
-export function textWithCopies(printer: PrinterConfig, body: string) {
+/** Ulangi teks sesuai jumlah salinan printer. `sep` pemisah antar salinan. */
+export function textWithCopies(printer: PrinterConfig, body: string, sep = "\n\n") {
   const copies = Math.min(5, Math.max(1, Math.round(printer.copies || 1)));
-  return Array.from({ length: copies }, () => body).join("\n\n");
+  return Array.from({ length: copies }, () => body).join(sep);
 }
 
 export const defaultReceiptLayout: DocLayout = {
