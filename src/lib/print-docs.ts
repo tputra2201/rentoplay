@@ -295,14 +295,20 @@ export function printLabels(opts: {
   const stamp = time(opts.at ?? Date.now());
   const mode = printMode(printer);
   if (mode === "android" || mode === "rawbt" || mode === "bluetooth" || mode === "usb") {
+    // Kertas label 40 mm (mis. stiker 40×30 mm): antar-order dan antar salinan
+    // dipisah Form Feed (ASCII 12) agar sensor gap printer memotong tepat di
+    // batas stiker — 1 order = tepat 1 stiker, tanpa feed kosong di akhir.
+    const isLabelPaper = printer.paper === "40mm";
+    const sep = isLabelPaper ? "\f" : "\n\n";
     const text = items
       .map((item) =>
         labelTextLines({ printer, item, heading, source, customerName, note, stamp }).join("\n"),
       )
-      .join("\n\n");
-    if (mode === "android") printViaAndroid(printer, textWithCopies(printer, text));
-    else if (mode === "rawbt") printViaRawBt(printer, textWithCopies(printer, text));
-    else void printDirect(printer, mode, textWithCopies(printer, text));
+      .join(sep);
+    if (mode === "android") printViaAndroid(printer, textWithCopies(printer, text, sep));
+    else if (mode === "rawbt")
+      printViaRawBt(printer, textWithCopies(printer, text, sep), { trailingFeed: !isLabelPaper });
+    else void printDirect(printer, mode, textWithCopies(printer, text, sep));
     return;
   }
   const layout = labelLayout(printer);
