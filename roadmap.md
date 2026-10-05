@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Label, bill, dan struk thermal: dua baris kosong sebelum auto cutter; pertahankan perilaku printer stiker.
+
 - [x] 1. Data Store: hapus hint versi, Manager/Installer boleh ubah perangkat, wildcard IP `192.168.80.*`
 - [x] 2. Judul Setup & Report lebih tebal + warna aksen
 - [x] 3. Setup berbentuk tabel + panel detail (Kafe menu & meja, Setup Price, Promo, Payment, Printer, Finance, Membership, Playing Card, User)
