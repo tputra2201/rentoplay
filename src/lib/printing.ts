@@ -233,13 +233,14 @@ export function thermalCutText(text: string, blankLines = 5) {
   return `${text.replace(/[\r\n]+$/, "")}${"\n".repeat(blankLines + 1)}\x1d\x56\x42\x00`;
 }
 
-export function thermalBlankLines(printer: PrinterConfig) {
-  // Bill/struk: pertahankan tiga baris lama lalu tambahkan dua, bukan kurangi.
-  return printer.role === "kitchen" || printer.role === "bar" ? 1 : 5;
+export function thermalBlankLines(_printer: PrinterConfig) {
+  // Label, bill, dan struk memakai jarak yang sama: 2 baris kosong lalu potong.
+  return 2;
 }
 
 export function usesThermalCutter(printer: PrinterConfig) {
-  return printer.autoCut ?? (printer.paper === "58mm" || printer.paper === "80mm");
+  // Semua kertas thermal (termasuk label) memakai cutter kecuali dimatikan di pengaturan.
+  return printer.autoCut ?? printer.paper !== "a4";
 }
 
 /**
