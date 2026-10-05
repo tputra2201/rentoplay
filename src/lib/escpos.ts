@@ -257,7 +257,6 @@ async function writerFor(printer: PrinterConfig, kind: DirectKind): Promise<Writ
 /* --------------------------------- ESC/POS --------------------------------- */
 
 const ESC = 0x1b;
-const GS = 0x1d;
 
 /** Ubah teks jadi byte ESC/POS lengkap dengan inisialisasi dan potong kertas. */
 export function escposBytes(text: string, opts: { bold?: boolean; cut?: boolean } = {}) {
