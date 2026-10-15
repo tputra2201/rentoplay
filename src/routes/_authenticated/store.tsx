@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { DeviceNotifySettings } from "@/components/DeviceNotifySettings";
+import { TvNotifySettings } from "@/components/TvNotifySettings";
 import { createFileRoute } from "@tanstack/react-router";
 import { Store, ImageUp, ShieldCheck, Clock, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -697,6 +698,7 @@ function SessionSecuritySection() {
         </div>
       </div>
       <DeviceNotifySettings />
+      <TvNotifySettings />
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex items-center justify-between rounded-lg bg-secondary/60 p-3 text-sm">
           <span>Alarm suara saat waktu habis</span>
