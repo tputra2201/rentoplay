@@ -872,13 +872,18 @@ function FinanceDialogBody({ initialKind, onClose }: { initialKind: CashAccount;
   const { cashCategories, paymentMethods, addCashEntry } = useBilling();
   const { requireShift } = useShiftGate();
   const SYSTEM_IDS = new Set(MODULE_SOURCES.map((m) => m.defaultId));
-  const methods = paymentMethods.filter((p) => p.active);
-  const cashName =
-    methods.find((m) => /^(tunai|cash|uang)\b/i.test(m.name))?.name ?? methods[0]?.name ?? "Cash";
   const [kind, setKind] = useState<CashAccount>(initialKind);
+  const methodsFor = (k: CashAccount) =>
+    paymentMethods.filter(
+      (p) => p.active && (!p.modules || p.modules.includes(k as "other" | "payin" | "expense" | "payout")),
+    );
+  const cashOf = (list: typeof paymentMethods) =>
+    list.find((m) => /^(tunai|cash|uang)\b/i.test(m.name))?.name ?? list[0]?.name ?? "Cash";
+  const methods = methodsFor(kind);
   const [group, setGroup] = useState("");
   const [itemId, setItemId] = useState("");
-  const [payment, setPayment] = useState(cashName);
+  const [paymentRaw, setPayment] = useState(() => cashOf(methodsFor(initialKind)));
+  const payment = methods.some((m) => m.name === paymentRaw) ? paymentRaw : cashOf(methods);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
 

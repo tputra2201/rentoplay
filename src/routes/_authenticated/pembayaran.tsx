@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { formatRupiah, useBilling, type PaymentMethod } from "@/lib/billing-store";
+import { PAYMENT_MODULES, formatRupiah, useBilling, type PaymentMethod } from "@/lib/billing-store";
 import { SetupHeading, SetupTable, DetailField } from "@/components/SetupTable";
 
 export const Route = createFileRoute("/_authenticated/pembayaran")({
@@ -156,6 +156,30 @@ function PembayaranPage() {
                   />
                   {p.active ? "Aktif" : "Nonaktif"}
                 </label>
+              </DetailField>
+              <DetailField label="Muncul di">
+                <div className="grid grid-cols-2 gap-2">
+                  {PAYMENT_MODULES.map((mod) => {
+                    const current = p.modules ?? PAYMENT_MODULES.map((x) => x.key);
+                    const on = current.includes(mod.key);
+                    return (
+                      <label key={mod.key} className="flex items-center gap-2 text-sm">
+                        <Switch
+                          checked={on}
+                          onCheckedChange={(v) =>
+                            updatePaymentMethod(p.id, {
+                              modules: v
+                                ? [...current, mod.key]
+                                : current.filter((k) => k !== mod.key),
+                            })
+                          }
+                          aria-label={`${p.name} di ${mod.label}`}
+                        />
+                        {mod.label}
+                      </label>
+                    );
+                  })}
+                </div>
               </DetailField>
             </>
           )}

@@ -127,7 +127,7 @@ function BookingPage() {
   const [addonRows, setAddonRows] = useState<BookingAddon[]>([]);
   const [orderRows, setOrderRows] = useState<BookingOrder[]>([]);
   const [dp, setDp] = useState("");
-  const activePayments = paymentMethods.filter((item) => item.active);
+  const activePayments = paymentMethods.filter((item) => item.active && (!item.modules || item.modules.includes("rental")));
   const [dpPayment, setDpPayment] = useState(activePayments[0]?.name ?? "Cash");
 
   const ordered = [...bookings].sort((a, b) => a.startAt - b.startAt);

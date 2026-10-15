@@ -28,7 +28,7 @@ export function CardFundingSelect({
 }) {
   const { paymentMethods } = useBilling();
   const active = paymentMethods
-    .filter((m) => m.active && !EXCLUDED.test(m.name))
+    .filter((m) => m.active && (!m.modules || m.modules.includes("card")) && !EXCLUDED.test(m.name))
     .map((m) => m.name);
   const options = Array.from(
     new Set(active.some((n) => n.toLowerCase() === "cash") ? active : ["Cash", ...active]),

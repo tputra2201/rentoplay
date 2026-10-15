@@ -259,7 +259,7 @@ function StationDialogBody({
       (item) => item.name.trim().toLowerCase() === customerName.trim().toLowerCase(),
     ) ?? null;
 
-  const activePayments = paymentMethods.filter((p) => p.active);
+  const activePayments = paymentMethods.filter((p) => p.active && (!p.modules || p.modules.includes("rental")));
   const selectedPayment =
     payment || activePayments[0]?.name || "Cash";
 
