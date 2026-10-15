@@ -29,6 +29,7 @@ public final class MainActivity extends Activity {
         webView.getSettings().setAllowFileAccess(false);
         webView.getSettings().setAllowContentAccess(false);
         webView.addJavascriptInterface(new PrintBridge(this, webView), "BillingAndroid");
+        webView.addJavascriptInterface(new TvBridge(this), "RenToPlayTV");
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
