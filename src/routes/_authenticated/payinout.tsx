@@ -19,7 +19,7 @@ function PayInOutPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-3xl font-bold sm:text-4xl">PAY-IN / PAY-OUT</h1>
+        <h1 className="text-3xl font-bold sm:text-4xl">Finance</h1>
       </header>
       <TodayStats />
       <FinanceQuickActions />
