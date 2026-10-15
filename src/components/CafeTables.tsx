@@ -172,7 +172,7 @@ export function CafeTables({ allowDelete = false }: { allowDelete?: boolean }) {
 
 
 
-  const activeMethods = paymentMethods.filter((p) => p.active);
+  const activeMethods = paymentMethods.filter((p) => p.active && (!p.modules || p.modules.includes("cafe")));
   const otherMethods = activeMethods.filter((m) => m.name !== CARD_PAYMENT_NAME);
   // Tipe pembayaran bawaan = tunai. Namanya bebas dikustomisasi tiap toko,
   // jadi dikenali dari kata "tunai"/"cash"/"uang", bukan dari ID tetap.
