@@ -46,13 +46,13 @@ export function DeviceNotifyWatcher() {
       const s = station.session;
       const ip = ips[station.id];
       if (!s || !ip || s.mode === "open" || s.pausedAt) continue;
-      const end = Math.round((now + remainingSeconds(s, now) * 1000) / 30_000) * 30_000;
+      const end = now + remainingSeconds(s, now) * 1000;
       const key = `${station.id}:${s.startAt}`;
       const sig = `${ip}|${end}`;
       want.set(key, sig);
       const prev = tvPlan.current.get(key);
       const prevEnd = prev ? Number(prev.split("|")[1]) : NaN;
-      if (prev?.split("|")[0] !== ip || Math.abs(prevEnd - end) > 30_000) {
+      if (prev?.split("|")[0] !== ip || Math.abs(prevEnd - end) > 5_000) {
         bridge.schedule(key, ip, station.name, end);
         tvPlan.current.set(key, sig);
       }
