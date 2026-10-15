@@ -892,12 +892,12 @@ function FinanceDialogBody({ initialKind, onClose }: { initialKind: CashAccount;
 
   const submit = () => {
     const value = Number(amount) || 0;
-    if (!group) return toast.error("Pilih kategori");
-    if (!itemId) return toast.error("Pilih item");
-    if (value <= 0) return toast.error("Isi nominal");
+    if (!group) { toast.error("Pilih kategori"); return; }
+    if (!itemId) { toast.error("Pilih item"); return; }
+    if (value <= 0) { toast.error("Isi nominal"); return; }
     if (!requireShift()) return;
     const row = addCashEntry({ categoryId: itemId, amount: value, payment, note: note.trim() });
-    if (!row) return toast.error("Catatan gagal disimpan");
+    if (!row) { toast.error("Catatan gagal disimpan"); return; }
     toast.success(`${row.categoryName} ${formatRupiah(row.amount)} dicatat`);
     onClose();
   };
