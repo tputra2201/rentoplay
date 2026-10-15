@@ -4,10 +4,10 @@ import { CashHistory, FinanceQuickActions, TodayStats } from "@/components/finan
 export const Route = createFileRoute("/_authenticated/payinout")({
   head: () => ({
     meta: [
-      { title: "PAY-IN / PAY-OUT — RenToPlay" },
-      { name: "description", content: "Catat PAY-IN dan PAY-OUT kasir selama shift berjalan." },
-      { property: "og:title", content: "PAY-IN / PAY-OUT — RenToPlay" },
-      { property: "og:description", content: "Form cepat pencatatan uang masuk dan keluar kasir." },
+      { title: "Finance — RenToPlay" },
+      { name: "description", content: "Catat Other Revenue, Expenses, Pay-In, dan Pay-Out selama shift berjalan." },
+      { property: "og:title", content: "Finance — RenToPlay" },
+      { property: "og:description", content: "Pencatatan uang masuk dan keluar kasir." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

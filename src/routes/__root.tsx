@@ -184,7 +184,7 @@ function RootShell({ children }: { children: ReactNode }) {
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutGrid },
   { to: "/shift", label: "Kasir", icon: ClipboardCheck },
-  { to: "/payinout", label: "PAY-IN/OUT", icon: Coins },
+  { to: "/payinout", label: "Finance", icon: Coins },
   { to: "/booking", label: "Reservasi", icon: CalendarDays },
   { to: "/kartu", label: "Playing Card", icon: CreditCard },
   { to: "/laporan", label: "Reports", icon: BarChart3 },
