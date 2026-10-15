@@ -61,6 +61,7 @@ import { PresenceHeartbeat } from "@/components/PresenceHeartbeat";
 import { ReservationAlert } from "@/components/ReservationAlert";
 import { IdleLogout } from "@/components/IdleLogout";
 import { TimeUpAlarm } from "@/components/TimeUpAlarm";
+import { DeviceNotifyWatcher } from "@/components/DeviceNotifyWatcher";
 import { InstallAppTitle } from "@/components/InstallAppTitle";
 import { AppUpdater } from "@/components/AppUpdater";
 import { appSignature } from "@/lib/app-info";
@@ -220,6 +221,7 @@ function RootComponent() {
             <PresenceHeartbeat />
             <ReservationAlert />
             <TimeUpAlarm />
+            <DeviceNotifyWatcher />
             <AppUpdater />
             <IdleLogout />
             <AndroidPrintFeedback />
