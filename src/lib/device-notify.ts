@@ -18,10 +18,16 @@ export function setDeviceNotifyFlag(on: boolean) {
   localStorage.setItem(KEY, on ? "1" : "0");
 }
 
-async function registration() {
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | null> {
+  return Promise.race([p, new Promise<null>((r) => setTimeout(() => r(null), ms))]);
+}
+
+async function registration(): Promise<ServiceWorkerRegistration | null> {
   if (!("serviceWorker" in navigator)) return null;
   try {
-    return await navigator.serviceWorker.register("/notify-sw.js", { scope: "/notify-sw/" });
+    // Worker ini tanpa fetch handler/cache, aman di scope root.
+    await navigator.serviceWorker.register("/notify-sw.js", { scope: "/" });
+    return await withTimeout(navigator.serviceWorker.ready, 4000);
   } catch {
     return null;
   }
@@ -34,7 +40,7 @@ export async function enableDeviceNotify() {
     Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
   const ok = perm === "granted";
   setDeviceNotifyFlag(ok);
-  if (ok) await registration();
+  if (ok) void registration();
   return ok;
 }
 
@@ -46,7 +52,6 @@ export async function sendDeviceNotify(title: string, body: string, tag?: string
   const reg = await registration();
   if (reg) {
     try {
-      await navigator.serviceWorker.ready.catch(() => null);
       await reg.showNotification(title, options);
       return true;
     } catch {
