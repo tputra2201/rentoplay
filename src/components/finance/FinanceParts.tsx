@@ -1,4 +1,6 @@
 import { useMemo, useRef, useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { ArrowDownCircle, ArrowUpCircle, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ShiftLockedNotice, useShiftGate } from "@/components/ShiftGate";
@@ -833,5 +835,174 @@ export function TodayStats() {
         <Stat label="PAY-OUT hari ini (bukan expenses)" value={formatRupiah(sum((e) => e.direction === "out" && entryAccount(e) === "payout"))} />
       </section>
     </>
+  );
+}
+
+const FINANCE_KINDS: { account: CashAccount; label: string; hint: string }[] = [
+  { account: "other", label: "Other Revenue", hint: "Uang masuk — menambah pendapatan" },
+  { account: "expense", label: "Expenses", hint: "Uang keluar — mengurangi pendapatan" },
+  { account: "payin", label: "Pay-In", hint: "Uang masuk, tidak mempengaruhi pendapatan" },
+  { account: "payout", label: "Pay-Out", hint: "Uang keluar, tidak mempengaruhi pendapatan" },
+];
+
+/** Empat tombol cepat ala Finance Univer: pilih jenis → kategori → item. */
+export function FinanceQuickActions() {
+  const [kind, setKind] = useState<CashAccount | null>(null);
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {FINANCE_KINDS.map((k) => (
+          <Button key={k.account} className="h-12" onClick={() => setKind(k.account)}>
+            <Plus className="size-4" /> {k.label}
+          </Button>
+        ))}
+      </div>
+      <ShiftLockedNotice />
+      <FinanceDialog kind={kind} onClose={() => setKind(null)} />
+    </>
+  );
+}
+
+function FinanceDialog({ kind, onClose }: { kind: CashAccount | null; onClose: () => void }) {
+  if (!kind) return null;
+  return <FinanceDialogBody initialKind={kind} onClose={onClose} />;
+}
+
+function FinanceDialogBody({ initialKind, onClose }: { initialKind: CashAccount; onClose: () => void }) {
+  const { cashCategories, paymentMethods, addCashEntry } = useBilling();
+  const { requireShift } = useShiftGate();
+  const SYSTEM_IDS = new Set(MODULE_SOURCES.map((m) => m.defaultId));
+  const methods = paymentMethods.filter((p) => p.active);
+  const cashName =
+    methods.find((m) => /^(tunai|cash|uang)\b/i.test(m.name))?.name ?? methods[0]?.name ?? "Cash";
+  const [kind, setKind] = useState<CashAccount>(initialKind);
+  const [group, setGroup] = useState("");
+  const [itemId, setItemId] = useState("");
+  const [payment, setPayment] = useState(cashName);
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+
+  const items = cashCategories.filter(
+    (c) => c.active && !SYSTEM_IDS.has(c.id) && !c.mapFor && categoryAccount(c) === kind,
+  );
+  const groups = Array.from(new Set(items.map((c) => c.group || "Lainnya")));
+  const groupItems = items.filter((c) => (c.group || "Lainnya") === group);
+  const sel =
+    "h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50";
+
+  const submit = () => {
+    const value = Number(amount) || 0;
+    if (!group) { toast.error("Pilih kategori"); return; }
+    if (!itemId) { toast.error("Pilih item"); return; }
+    if (value <= 0) { toast.error("Isi nominal"); return; }
+    if (!requireShift()) return;
+    const row = addCashEntry({ categoryId: itemId, amount: value, payment, note: note.trim() });
+    if (!row) { toast.error("Catatan gagal disimpan"); return; }
+    toast.success(`${row.categoryName} ${formatRupiah(row.amount)} dicatat`);
+    onClose();
+  };
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-h-[96dvh] gap-3 overflow-y-auto p-4 sm:max-w-md md:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Catat Finance</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-x-4 gap-y-2 md:grid-cols-2">
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 md:col-span-2">
+            {FINANCE_KINDS.map((k) => (
+              <Button
+                key={k.account}
+                size="sm"
+                variant={kind === k.account ? "default" : "secondary"}
+                onClick={() => {
+                  setKind(k.account);
+                  setGroup("");
+                  setItemId("");
+                }}
+              >
+                {k.label}
+              </Button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground md:col-span-2">
+            {FINANCE_KINDS.find((k) => k.account === kind)?.hint}
+          </p>
+          <div className="space-y-1">
+            <Label htmlFor="fin-cat">Kategori</Label>
+            <select
+              id="fin-cat"
+              className={sel}
+              value={group}
+              onChange={(e) => {
+                setGroup(e.target.value);
+                setItemId("");
+              }}
+            >
+              <option value="">— Pilih kategori —</option>
+              {groups.map((g) => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+            {groups.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                Belum ada item. Atur di menu Finance → Item &amp; Kategori.
+              </p>
+            )}
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="fin-item">Item</Label>
+            <select
+              id="fin-item"
+              className={sel}
+              value={itemId}
+              disabled={!group}
+              onChange={(e) => setItemId(e.target.value)}
+            >
+              <option value="">— Pilih item —</option>
+              {groupItems.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="fin-method">Metode pembayaran</Label>
+            <select
+              id="fin-method"
+              className={sel}
+              value={payment}
+              onChange={(e) => setPayment(e.target.value)}
+            >
+              {methods.map((m) => (
+                <option key={m.id} value={m.name}>{m.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="fin-amount">Nominal</Label>
+            <Input
+              id="fin-amount"
+              inputMode="numeric"
+              placeholder="0"
+              className="h-10 text-right text-lg font-bold tabular-nums"
+              value={amount ? Number(amount).toLocaleString("id-ID") : ""}
+              onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ""))}
+            />
+          </div>
+          <div className="space-y-1 md:col-span-2">
+            <Label htmlFor="fin-note">Keterangan</Label>
+            <Input
+              id="fin-note"
+              value={note}
+              placeholder="Opsional"
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </div>
+          <Button className="h-11 w-full md:col-span-2" onClick={submit}>
+            Simpan
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
