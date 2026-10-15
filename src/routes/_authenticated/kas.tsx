@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AccountMapping, CashHistory, CategoryEditor, GroupEditor } from "@/components/finance/FinanceParts";
+import { AccountMapping, CashHistory, FinanceSetup } from "@/components/finance/FinanceParts";
 
 export const Route = createFileRoute("/_authenticated/kas")({
   head: () => ({
@@ -25,20 +25,14 @@ function KasPage() {
           Setup kategori & item uang masuk dan uang keluar. Pencatatan harian ada di menu PAY-IN/OUT.
         </p>
       </header>
-      <Tabs defaultValue="masuk">
+      <Tabs defaultValue="setup">
         <TabsList className="flex w-full flex-wrap">
-          <TabsTrigger value="masuk">Uang Masuk</TabsTrigger>
-          <TabsTrigger value="keluar">Uang Keluar</TabsTrigger>
+          <TabsTrigger value="setup">Kategori &amp; Item</TabsTrigger>
           <TabsTrigger value="mapping">Account Mapping</TabsTrigger>
           <TabsTrigger value="riwayat">Riwayat</TabsTrigger>
         </TabsList>
-        <TabsContent value="masuk" className="mt-4 space-y-6">
-          <GroupEditor direction="in" />
-          <CategoryEditor direction="in" />
-        </TabsContent>
-        <TabsContent value="keluar" className="mt-4 space-y-6">
-          <GroupEditor direction="out" />
-          <CategoryEditor direction="out" />
+        <TabsContent value="setup" className="mt-4">
+          <FinanceSetup />
         </TabsContent>
         <TabsContent value="mapping" className="mt-4">
           <AccountMapping />

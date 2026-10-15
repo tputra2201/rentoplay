@@ -1006,3 +1006,165 @@ function FinanceDialogBody({ initialKind, onClose }: { initialKind: CashAccount;
     </Dialog>
   );
 }
+
+const KIND_DIRECTION: Record<CashAccount, CashDirection> = {
+  sales: "in",
+  other: "in",
+  payin: "in",
+  expense: "out",
+  payout: "out",
+};
+
+/** Setup Finance ala Univer: 4 kartu jenis, tiap kartu berisi kategori dan item. */
+export function FinanceSetup() {
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      {FINANCE_KINDS.map((k) => (
+        <KindCard key={k.account} kind={k.account} title={k.label} hint={k.hint} />
+      ))}
+    </div>
+  );
+}
+
+function KindCard({ kind, title, hint }: { kind: CashAccount; title: string; hint: string }) {
+  const { cashGroups, cashCategories, addCashGroup } = useBilling();
+  const direction = KIND_DIRECTION[kind];
+  const SYSTEM_IDS = new Set(MODULE_SOURCES.map((m) => m.defaultId));
+  const items = cashCategories.filter(
+    (c) => c.direction === direction && !SYSTEM_IDS.has(c.id) && !c.mapFor && categoryAccount(c) === kind,
+  );
+  const fallback = direction === "in" ? "other" : "expense";
+  const groups = cashGroups.filter((g) => {
+    if (g.direction !== direction) return false;
+    if (g.account) return g.account === kind;
+    if (items.some((c) => c.group === g.name)) return true;
+    const anyItem = cashCategories.some((c) => c.direction === direction && c.group === g.name);
+    return !anyItem && kind === fallback;
+  });
+  const [name, setName] = useState("");
+  const add = () => {
+    if (!name.trim()) return;
+    const row = addCashGroup({ name, direction, account: kind });
+    if (!row) {
+      toast.error("Nama kategori sudah ada");
+      return;
+    }
+    setName("");
+  };
+  return (
+    <section className="surface-panel space-y-3 p-4">
+      <div>
+        <h2 className="text-base font-semibold">{title}</h2>
+        <p className="text-sm text-muted-foreground">{hint}</p>
+      </div>
+      {groups.length === 0 && <p className="text-sm text-muted-foreground">Belum ada kategori.</p>}
+      {groups.map((g) => (
+        <CategoryBlock
+          key={g.id}
+          group={g}
+          kind={kind}
+          items={items.filter((c) => c.group === g.name)}
+        />
+      ))}
+      <div className="flex gap-2">
+        <Input
+          value={name}
+          placeholder="Kategori baru"
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && add()}
+        />
+        <Button onClick={add}>
+          <Plus className="size-4" /> Kategori
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+function CategoryBlock({
+  group,
+  kind,
+  items,
+}: {
+  group: CashGroup;
+  kind: CashAccount;
+  items: CashCategory[];
+}) {
+  const { cashCategories, updateCashGroup, removeCashGroup, addCashCategory, removeCashCategory } =
+    useBilling();
+  const { confirm, dialog } = useConfirm();
+  const [draft, setDraft] = useState(group.name);
+  const [item, setItem] = useState("");
+  const addItem = () => {
+    if (!item.trim()) return;
+    const row = addCashCategory({ name: item, direction: group.direction, account: kind, group: group.name });
+    if (!row) {
+      toast.error("Nama item sudah ada");
+      return;
+    }
+    setItem("");
+  };
+  const removeGroup = () =>
+    confirm({
+      title: `Hapus kategori ${group.name}?`,
+      description: "Semua item di dalamnya ikut dihapus. Catatan kas lama tetap tersimpan.",
+      onConfirm: () => {
+        cashCategories
+          .filter((c) => c.direction === group.direction && c.group === group.name)
+          .forEach((c) => removeCashCategory(c.id));
+        setTimeout(() => {
+          removeCashGroup(group.id);
+          toast.success(`Kategori ${group.name} dihapus`);
+        }, 0);
+      },
+    });
+  return (
+    <div className="space-y-2 rounded-lg border p-3">
+      <div className="flex gap-2">
+        <Input
+          value={draft}
+          className="font-semibold"
+          aria-label="Nama kategori"
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => draft.trim() && draft !== group.name && updateCashGroup(group.id, { name: draft })}
+        />
+        <Button size="icon" variant="ghost" aria-label="Hapus kategori" onClick={removeGroup}>
+          <Trash2 className="size-4" />
+        </Button>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {items.map((it) => (
+          <span key={it.id} className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs">
+            {it.name}
+            <button
+              aria-label={`Hapus ${it.name}`}
+              className="text-muted-foreground hover:text-destructive"
+              onClick={() =>
+                confirm({
+                  title: `Hapus item ${it.name}?`,
+                  description: "Catatan kas lama tetap tersimpan.",
+                  onConfirm: () => removeCashCategory(it.id),
+                })
+              }
+            >
+              ×
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <Input
+          value={item}
+          placeholder="Item baru"
+          className="h-9"
+          onChange={(e) => setItem(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && addItem()}
+        />
+        <Button size="sm" variant="secondary" onClick={addItem}>
+          Tambah
+        </Button>
+      </div>
+      {dialog}
+    </div>
+  );
+}

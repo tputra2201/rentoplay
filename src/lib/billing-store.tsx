@@ -952,6 +952,8 @@ export type CashGroup = {
   direction: CashDirection;
   active: boolean;
   sort?: number;
+  /** Jenis Finance tempat kategori ini dibuat (Other Revenue/Expenses/Pay-In/Pay-Out). */
+  account?: CashAccount;
 };
 
 export type CashEntry = {
@@ -2151,7 +2153,7 @@ type Ctx = State & {
   }) => CashCategory | null;
   updateCashCategory: (id: string, patch: Partial<Omit<CashCategory, "id">>) => void;
   removeCashCategory: (id: string) => void;
-  addCashGroup: (input: { name: string; direction: CashDirection }) => CashGroup | null;
+  addCashGroup: (input: { name: string; direction: CashDirection; account?: CashAccount }) => CashGroup | null;
   updateCashGroup: (id: string, patch: Partial<Omit<CashGroup, "id" | "direction">>) => void;
   removeCashGroup: (id: string) => boolean;
   addCashEntry: (input: {
@@ -5493,6 +5495,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
           direction: input.direction,
           active: true,
           sort: state.cashGroups.length,
+          ...(input.account ? { account: input.account } : {}),
         };
         update((prev) => ({ ...prev, cashGroups: [...prev.cashGroups, row] }));
         return row;
