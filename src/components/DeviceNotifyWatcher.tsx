@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { useBilling, remainingSeconds } from "@/lib/billing-store";
 import { useAuth } from "@/lib/auth";
 import { deviceNotifyEnabled, sendDeviceNotify } from "@/lib/device-notify";
+import { tvBridge, tvIps } from "@/lib/tv-notify";
 
 // Diurutkan dari batas terkecil: yang pertama cocok = tahap terakhir yang dilewati.
 const STAGES = [
@@ -33,6 +34,36 @@ export function DeviceNotifyWatcher() {
   const { session } = useAuth();
   const mountedAt = useRef(Date.now());
   const track = useRef(new Map<string, { end: number; sent: Set<string> }>());
+
+  // Jadwal alarm Android ke TV: diperbarui hanya saat waktu selesai berubah.
+  const tvPlan = useRef(new Map<string, string>());
+  useEffect(() => {
+    const bridge = tvBridge();
+    if (!bridge) return;
+    const ips = session ? tvIps() : {};
+    const want = new Map<string, string>();
+    for (const station of stations) {
+      const s = station.session;
+      const ip = ips[station.id];
+      if (!s || !ip || s.mode === "open" || s.pausedAt) continue;
+      const end = Math.round((now + remainingSeconds(s, now) * 1000) / 30_000) * 30_000;
+      const key = `${station.id}:${s.startAt}`;
+      const sig = `${ip}|${end}`;
+      want.set(key, sig);
+      const prev = tvPlan.current.get(key);
+      const prevEnd = prev ? Number(prev.split("|")[1]) : NaN;
+      if (prev?.split("|")[0] !== ip || Math.abs(prevEnd - end) > 30_000) {
+        bridge.schedule(key, ip, station.name, end);
+        tvPlan.current.set(key, sig);
+      }
+    }
+    for (const key of [...tvPlan.current.keys()]) {
+      if (!want.has(key)) {
+        bridge.cancel(key);
+        tvPlan.current.delete(key);
+      }
+    }
+  }, [stations, now, session]);
 
   useEffect(() => {
     if (!session || !deviceNotifyEnabled()) return;
