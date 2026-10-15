@@ -289,7 +289,26 @@ export type CafeTable = {
 };
 
 
-export type PaymentMethod = { id: string; name: string; active: boolean; sort?: number };
+export type PaymentModule = "other" | "payin" | "expense" | "payout" | "card" | "rental" | "cafe";
+export const PAYMENT_MODULES: { key: PaymentModule; label: string }[] = [
+  { key: "other", label: "Other Income" },
+  { key: "payin", label: "Pay-In" },
+  { key: "expense", label: "Expenses" },
+  { key: "payout", label: "Pay-Out" },
+  { key: "card", label: "Playing Card" },
+  { key: "rental", label: "Rental" },
+  { key: "cafe", label: "Kafe" },
+];
+/** `modules` kosong/undefined = muncul di semua modul (data lama tetap tampil). */
+export type PaymentMethod = {
+  id: string;
+  name: string;
+  active: boolean;
+  sort?: number;
+  modules?: PaymentModule[];
+};
+export const methodAllowed = (m: PaymentMethod, mod: PaymentModule) =>
+  m.active && (!m.modules || m.modules.includes(mod));
 export type RentalPackage = {
   id: string;
   name: string;
