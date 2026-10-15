@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { DeviceNotifySettings } from "@/components/DeviceNotifySettings";
 import { createFileRoute } from "@tanstack/react-router";
 import { Store, ImageUp, ShieldCheck, Clock, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
