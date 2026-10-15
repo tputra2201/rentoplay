@@ -952,6 +952,8 @@ export type CashGroup = {
   direction: CashDirection;
   active: boolean;
   sort?: number;
+  /** Jenis Finance tempat kategori ini dibuat (Other Revenue/Expenses/Pay-In/Pay-Out). */
+  account?: CashAccount;
 };
 
 export type CashEntry = {
@@ -2151,9 +2153,9 @@ type Ctx = State & {
   }) => CashCategory | null;
   updateCashCategory: (id: string, patch: Partial<Omit<CashCategory, "id">>) => void;
   removeCashCategory: (id: string) => void;
-  addCashGroup: (input: { name: string; direction: CashDirection }) => CashGroup | null;
+  addCashGroup: (input: { name: string; direction: CashDirection; account?: CashAccount }) => CashGroup | null;
   updateCashGroup: (id: string, patch: Partial<Omit<CashGroup, "id" | "direction">>) => void;
-  removeCashGroup: (id: string) => boolean;
+  removeCashGroup: (id: string, withItems?: boolean) => boolean;
   addCashEntry: (input: {
     categoryId: string;
     /** Bila diisi, item diambil dari Account Mapping modul ini. */
@@ -5493,6 +5495,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
           direction: input.direction,
           active: true,
           sort: state.cashGroups.length,
+          ...(input.account ? { account: input.account } : {}),
         };
         update((prev) => ({ ...prev, cashGroups: [...prev.cashGroups, row] }));
         return row;
@@ -5514,16 +5517,18 @@ export function BillingProvider({ children }: { children: ReactNode }) {
             ),
           };
         }),
-      removeCashGroup: (id) => {
+      removeCashGroup: (id, withItems) => {
         const row = state.cashGroups.find((g) => g.id === id);
         if (!row) return false;
-        const used = state.cashCategories.some(
-          (item) => item.direction === row.direction && item.group === row.name,
-        );
-        if (used) return false;
+        const inGroup = (item: CashCategory) =>
+          item.direction === row.direction && item.group === row.name;
+        if (!withItems && state.cashCategories.some(inGroup)) return false;
         update((prev) => ({
           ...prev,
           cashGroups: prev.cashGroups.filter((g) => g.id !== id),
+          cashCategories: withItems
+            ? prev.cashCategories.filter((item) => !inGroup(item))
+            : prev.cashCategories,
         }));
         return true;
       },
