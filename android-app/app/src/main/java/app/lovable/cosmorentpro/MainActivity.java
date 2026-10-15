@@ -13,7 +13,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 public final class MainActivity extends Activity {
-    private static final String APP_URL = "https://cosmo-rentpro.lovable.app";
+    private static final String APP_URL = "https://rentoplay.id";
     private static final int BLUETOOTH_PERMISSION_REQUEST = 41;
     private WebView webView;
 
@@ -34,7 +34,7 @@ public final class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String host = request.getUrl().getHost();
-                if (host != null && host.equals("cosmo-rentpro.lovable.app")) {
+                if (host != null && (host.equals("rentoplay.id") || host.equals("www.rentoplay.id") || host.equals("rentoplay.lovable.app"))) {
                     return false;
                 }
                 Intent browser = new Intent(Intent.ACTION_VIEW, Uri.parse(request.getUrl().toString()));
