@@ -1090,7 +1090,7 @@ function CategoryBlock({
   kind: CashAccount;
   items: CashCategory[];
 }) {
-  const { cashCategories, updateCashGroup, removeCashGroup, addCashCategory, removeCashCategory } =
+  const { updateCashGroup, removeCashGroup, addCashCategory, removeCashCategory } =
     useBilling();
   const { confirm, dialog } = useConfirm();
   const [draft, setDraft] = useState(group.name);
@@ -1109,13 +1109,8 @@ function CategoryBlock({
       title: `Hapus kategori ${group.name}?`,
       description: "Semua item di dalamnya ikut dihapus. Catatan kas lama tetap tersimpan.",
       onConfirm: () => {
-        cashCategories
-          .filter((c) => c.direction === group.direction && c.group === group.name)
-          .forEach((c) => removeCashCategory(c.id));
-        setTimeout(() => {
-          removeCashGroup(group.id);
-          toast.success(`Kategori ${group.name} dihapus`);
-        }, 0);
+        removeCashGroup(group.id, true);
+        toast.success(`Kategori ${group.name} dihapus`);
       },
     });
   return (

@@ -2155,7 +2155,7 @@ type Ctx = State & {
   removeCashCategory: (id: string) => void;
   addCashGroup: (input: { name: string; direction: CashDirection; account?: CashAccount }) => CashGroup | null;
   updateCashGroup: (id: string, patch: Partial<Omit<CashGroup, "id" | "direction">>) => void;
-  removeCashGroup: (id: string) => boolean;
+  removeCashGroup: (id: string, withItems?: boolean) => boolean;
   addCashEntry: (input: {
     categoryId: string;
     /** Bila diisi, item diambil dari Account Mapping modul ini. */
@@ -5517,16 +5517,18 @@ export function BillingProvider({ children }: { children: ReactNode }) {
             ),
           };
         }),
-      removeCashGroup: (id) => {
+      removeCashGroup: (id, withItems) => {
         const row = state.cashGroups.find((g) => g.id === id);
         if (!row) return false;
-        const used = state.cashCategories.some(
-          (item) => item.direction === row.direction && item.group === row.name,
-        );
-        if (used) return false;
+        const inGroup = (item: CashCategory) =>
+          item.direction === row.direction && item.group === row.name;
+        if (!withItems && state.cashCategories.some(inGroup)) return false;
         update((prev) => ({
           ...prev,
           cashGroups: prev.cashGroups.filter((g) => g.id !== id),
+          cashCategories: withItems
+            ? prev.cashCategories.filter((item) => !inGroup(item))
+            : prev.cashCategories,
         }));
         return true;
       },
