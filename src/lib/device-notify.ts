@@ -40,7 +40,8 @@ export async function enableDeviceNotify() {
 
 export async function sendDeviceNotify(title: string, body: string, tag?: string) {
   if (!deviceNotifySupported() || Notification.permission !== "granted") return false;
-  const options: NotificationOptions = { body, tag, icon: "/icon-192.png", badge: "/icon-192.png" };
+  const options: NotificationOptions = { body, icon: "/icon-192.png", badge: "/icon-192.png" };
+  if (tag) options.tag = tag;
   // Chrome Android hanya mengizinkan notifikasi lewat service worker.
   const reg = await registration();
   if (reg) {
