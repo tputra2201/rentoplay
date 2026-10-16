@@ -22,3 +22,5 @@
 - TV overlays accept store logos as image data URIs as well as HTTP URLs, and HTTP bodies are read by byte length; store uploads are embedded images and Unicode text must not stall requests.
 - Successful store branding updates dispatch `rentoplay:store-info-updated` for every useStoreInfo consumer to refresh; otherwise notification schedules keep stale branding until app restart.
 - Station Release dismisses only its configured TV overlay, never billing or session state; expiry eligibility and dispatch are tested in tests/tv-notify.test.js.
+- Notification configuration keeps legacy message strings alongside optional structured lines and per-stage titles; Android forwards resolved titles/messages so older configurations remain valid.
+- Store logo uploads use the shared PNG processor with bounded payload size and opt-in border-connected background removal; alpha and enclosed logo details must remain intact.

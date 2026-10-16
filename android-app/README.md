@@ -3,7 +3,7 @@
 Aplikasi Android ini membuka Billing Rental PS resmi dan mencetak langsung ke printer Bluetooth
 Classic ESC/POS, termasuk Kassen MT-300 VL 80 mm. RawBT tidak diperlukan.
 
-Versi 1.2.0 mendukung pemilihan gambar dari galeri melalui tombol Unggah Logo.
+Versi 1.3.0 meneruskan judul khusus tiap pengingat dan tiga baris pesan dari Menu Station; pemilihan gambar galeri tetap didukung.
 Build ulang lalu pasang APK ini sebagai pembaruan aplikasi lama (jangan hapus aplikasi agar IP Station tetap tersimpan).
 Tombol Release pada kartu Station melepas layar penuh TV tanpa mengakhiri sesi/tagihan.
 

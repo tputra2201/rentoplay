@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { canReleaseStation, releaseStationScreen, tvSchedulePayload, DEFAULT_TV_CONFIG } from "../src/lib/tv-notify";
+import { canReleaseStation, releaseStationScreen, tvSchedulePayload, tvConfig, DEFAULT_TV_CONFIG } from "../src/lib/tv-notify";
+import { removeSolidBackground } from "../src/lib/logo-image";
 
 describe("Station Release", () => {
   test("only timed sessions whose time has expired can be released", () => {
@@ -34,4 +35,44 @@ test("store logo is preserved in fullscreen time-up schedules", () => {
   expect(payload.logo).toBe(logo);
   expect(payload.block).toBe(true);
   expect(payload.stages.at(-1).sec).toBe(0);
+});
+
+test("default reminders run at 10, 5 and 2 minutes", () => {
+  const payload = JSON.parse(tvSchedulePayload(DEFAULT_TV_CONFIG, "Station", 123456, "", "Store"));
+  expect(payload.stages.map((s) => s.sec)).toEqual([600, 300, 120, 0]);
+});
+
+test("custom reminder title and three lines reach the schedule with minute substitution", () => {
+  const cfg = { ...DEFAULT_TV_CONFIG, stages: [{ minutes: 5, title: "SISA {menit}", message: "legacy", messageLines: ["Baris {menit}", "", "Hubungi kasir"] }], endMessageLines: ["Selesai", "Hubungi kasir", "Terima kasih"] };
+  const payload = JSON.parse(tvSchedulePayload(cfg, "Station", 123456, "", "Store"));
+  expect(payload.stages[0].title).toBe("SISA 5");
+  expect(payload.stages[0].message).toBe("Baris 5\n\nHubungi kasir");
+  expect(payload.stages[1].message).toBe("Selesai\nHubungi kasir\nTerima kasih");
+});
+
+test("legacy saved end message is retained rather than overwritten by new defaults", () => {
+  const w = globalThis.window, s = globalThis.localStorage;
+  try {
+    Object.assign(globalThis, { window: {}, localStorage: { getItem: () => JSON.stringify({ endMessage: "Pesan lama" }) } });
+    expect(tvConfig().endMessageLines).toEqual(["Pesan lama", "", ""]);
+  } finally { Object.assign(globalThis, { window: w, localStorage: s }); }
+});
+
+test("background removal preserves enclosed white details and foreground colors", () => {
+  const pixels = new Uint8ClampedArray(5 * 5 * 4).fill(255);
+  for (let y = 1; y <= 3; y++) for (let x = 1; x <= 3; x++) {
+    if (x === 2 && y === 2) continue;
+    pixels.set([20, 80, 140, 255], (y * 5 + x) * 4);
+  }
+  expect(removeSolidBackground(pixels, 5, 5)).toBe(true);
+  expect(pixels[3]).toBe(0);
+  expect([...pixels.slice(24, 28)]).toEqual([20, 80, 140, 255]);
+  expect([...pixels.slice(48, 52)]).toEqual([255, 255, 255, 255]);
+});
+
+test("transparent logo border is not mistaken for a removable solid background", () => {
+  const pixels = new Uint8ClampedArray(3 * 3 * 4);
+  pixels.set([255, 255, 255, 255], 16);
+  expect(removeSolidBackground(pixels, 3, 3)).toBe(false);
+  expect(pixels[19]).toBe(255);
 });
