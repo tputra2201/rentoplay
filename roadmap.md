@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Perbaiki pemilihan logo di APK kasir, logo pada notifikasi TV, dan Release di samping Pause hanya saat waktu habis; siapkan ZIP Android terbaru.
+- [x] Perbaiki pemilihan logo di APK kasir, logo pada notifikasi TV, dan Release di samping Pause hanya saat waktu habis; ZIP Android terbaru disiapkan. Aturan Release lulus 3 tes, pemilih logo web terbuka; build/install Android dan uji layar TV menunggu perangkat pengguna.
 
 - [x] Koreksi cetak Bluetooth: bill/struk mempertahankan jarak lama + dua baris; label satu baris + cutter terpisah dari ukuran kertas (data kiriman teruji; hasil fisik menunggu printer pengguna).
 
