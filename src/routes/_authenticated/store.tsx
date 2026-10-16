@@ -85,6 +85,7 @@ function LogoSection({
         return;
       }
       setPreview(logo);
+      window.dispatchEvent(new Event("rentoplay:store-info-updated"));
       toast.success(logo ? "Logo store tersimpan." : "Logo store dihapus.");
     } catch {
       toast.error("Tidak ada koneksi ke server.");

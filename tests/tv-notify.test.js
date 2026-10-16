@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { canReleaseStation, releaseStationScreen, tvSchedulePayload, DEFAULT_TV_CONFIG } from "./tv-notify";
+import { canReleaseStation, releaseStationScreen, tvSchedulePayload, DEFAULT_TV_CONFIG } from "../src/lib/tv-notify";
 
 describe("Station Release", () => {
   test("only timed sessions whose time has expired can be released", () => {
@@ -10,12 +10,12 @@ describe("Station Release", () => {
     expect(canReleaseStation(undefined, 0)).toBe(false);
   });
   test("sends dismiss only to the chosen station", () => {
-    const sent: string[] = [];
+    const sent = [];
     const originalWindow = globalThis.window;
     const originalStorage = globalThis.localStorage;
     try {
       Object.assign(globalThis, {
-        window: { RenToPlayTV: { dismiss: (ip: string) => sent.push(ip) } },
+        window: { RenToPlayTV: { dismiss: (ip) => sent.push(ip) } },
         localStorage: { getItem: () => JSON.stringify({ a: "192.168.80.75", b: "192.168.80.76" }) },
       });
       expect(releaseStationScreen("a")).toBe("sent");

@@ -54,8 +54,8 @@ export function TvNotifySettings() {
     bridge.sendJson(
       ip,
       JSON.stringify({
-        title: `${store?.store_name || "RenToPlay"} - ${name}`,
-        endTitle: cfg.endTitle,
+        title: cfg.endTitle,
+        subtitle: `${store?.store_name || "RenToPlay"} - ${name}`,
         message: cfg.endMessage,
         level: "danger",
         block: true,

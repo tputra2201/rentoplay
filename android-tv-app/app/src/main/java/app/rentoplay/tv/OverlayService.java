@@ -20,6 +20,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.provider.Settings;
+import android.util.Base64;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
@@ -29,10 +30,11 @@ import android.widget.TextView;
 
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.URL;
+import java.net.URLConnection;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -85,23 +87,25 @@ public final class OverlayService extends Service {
     private void handle(Socket s) {
         try (Socket sock = s) {
             sock.setSoTimeout(5000);
-            BufferedReader in = new BufferedReader(new InputStreamReader(sock.getInputStream(), StandardCharsets.UTF_8));
-            String line = in.readLine();
+            BufferedInputStream in = new BufferedInputStream(sock.getInputStream());
+            String line = readHttpLine(in);
             if (line == null) return;
             String[] parts = line.split(" ");
             String method = parts[0], path = parts.length > 1 ? parts[1] : "/";
             int len = 0;
             String h;
-            while ((h = in.readLine()) != null && !h.isEmpty())
+            while ((h = readHttpLine(in)) != null && !h.isEmpty())
                 if (h.toLowerCase().startsWith("content-length:")) len = Integer.parseInt(h.substring(15).trim());
-            char[] body = new char[len];
+            if (len < 0 || len > 2 * 1024 * 1024) return;
+            byte[] body = new byte[len];
             int read = 0;
             while (read < len) { int r = in.read(body, read, len - read); if (r < 0) break; read += r; }
             String title = "RenToPlay", msg = "", level = "info", subtitle = "", logo = "";
             boolean block = false;
             int dur = 10;
             if (method.equals("POST") && read > 0) {
-                JSONObject j = new JSONObject(new String(body, 0, read));
+                if (read != len) return;
+                JSONObject j = new JSONObject(new String(body, 0, read, StandardCharsets.UTF_8));
                 title = j.optString("title", title); msg = j.optString("message", msg);
                 level = j.optString("level", level); dur = j.optInt("duration", dur);
                 block = j.optBoolean("block", false); subtitle = j.optString("subtitle", "");
@@ -129,6 +133,19 @@ public final class OverlayService extends Service {
         } catch (Exception ignored) { }
     }
 
+    /** Content-Length counts bytes, not Unicode characters. */
+    private static String readHttpLine(InputStream in) throws java.io.IOException {
+        ByteArrayOutputStream line = new ByteArrayOutputStream();
+        int b;
+        while ((b = in.read()) != -1) {
+            if (b == '\n') break;
+            if (b != '\r') line.write(b);
+            if (line.size() > 8192) throw new java.io.IOException("Header too long");
+        }
+        if (b == -1 && line.size() == 0) return null;
+        return new String(line.toByteArray(), StandardCharsets.US_ASCII);
+    }
+
     private static View blockView;
 
     /** Lepas layar penuh (dipanggil kasir). */
@@ -145,9 +162,18 @@ public final class OverlayService extends Service {
     static void showBlock(Context ctx, String title, String subtitle, String msg, String logoUrl) {
         Context app = ctx.getApplicationContext();
         Bitmap logo = null;
-        if (logoUrl != null && logoUrl.startsWith("http")) {
-            try (InputStream is = new URL(logoUrl).openStream()) { logo = BitmapFactory.decodeStream(is); }
-            catch (Exception ignored) { }
+        if (logoUrl != null) {
+            try {
+                if (logoUrl.startsWith("data:image/") && logoUrl.contains(";base64,")) {
+                    byte[] bytes = Base64.decode(logoUrl.substring(logoUrl.indexOf(',') + 1), Base64.DEFAULT);
+                    logo = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                } else if (logoUrl.startsWith("https://") || logoUrl.startsWith("http://")) {
+                    URLConnection connection = new URL(logoUrl).openConnection();
+                    connection.setConnectTimeout(3000);
+                    connection.setReadTimeout(3000);
+                    try (InputStream is = connection.getInputStream()) { logo = BitmapFactory.decodeStream(is); }
+                }
+            } catch (Exception ignored) { }
         }
         final Bitmap bmp = logo;
         MAIN.post(() -> {
