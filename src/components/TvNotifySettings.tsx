@@ -147,7 +147,10 @@ export function TvNotifySettings() {
               <Label htmlFor={`tv-title-${i}`}>Judul</Label>
               <Input id={`tv-title-${i}`} value={s.title ?? ""} placeholder="Nama store - Station" onChange={(e) => {
                 const stages = [...cfg.stages];
-                stages[i] = { ...s, title: e.target.value || undefined };
+                const next = { ...s };
+                if (e.target.value) next.title = e.target.value;
+                else delete next.title;
+                stages[i] = next;
                 update({ ...cfg, stages });
               }} />
             </div>
