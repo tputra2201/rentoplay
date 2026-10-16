@@ -61,7 +61,7 @@ public final class TvBridge {
                 if (at < now - 30_000) continue;
                 JSONObject payload = new JSONObject();
                 boolean end = sec == 0;
-                payload.put("title", end ? cfg.optString("endTitle", "WAKTU HABIS") : cfg.optString("title"));
+                payload.put("title", st.optString("title", end ? cfg.optString("endTitle", "WAKTU HABIS") : cfg.optString("title")));
                 payload.put("subtitle", cfg.optString("title"));
                 payload.put("message", st.optString("message"));
                 payload.put("level", st.optString("level", "info"));
