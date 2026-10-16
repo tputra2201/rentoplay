@@ -16,3 +16,4 @@
 - [x] Jenis promo: diskon, bonus jam rental, BOGO kafe, main X jam dapat menu gratis
 - [x] Gabung tagihan TV+TV (satu nota) dan titip meja kafe ke TV induk
 - [x] Tarif konsol Cosmo Gaming TS ter-reset lagi — cari akar masalah & kunci permanen
+- [x] Menu Station: daftar station + IP + pesan/menit pengingat; layar penuh saat habis sampai dilepas kasir; identitas APK RenToPlay (perlu build ulang kedua APK)

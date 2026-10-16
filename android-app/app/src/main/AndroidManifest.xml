@@ -10,7 +10,8 @@
 
     <application
         android:allowBackup="false"
-        android:label="Billing Rental PS"
+        android:label="RenToPlay Kasir"
+        android:icon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">

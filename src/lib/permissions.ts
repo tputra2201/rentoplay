@@ -46,6 +46,7 @@ export const MENU_PERMISSION: Record<string, string> = {
   "/payinout": "menu.kas",
   "/pembayaran": "menu.pembayaran",
   "/tarif": "menu.tarif",
+  "/station": "menu.tarif",
   "/laporan": "menu.laporan",
   "/pengguna": "menu.pengguna",
   "/backup": "menu.backup",

@@ -10,7 +10,7 @@
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <application android:label="RenToPlay TV" android:theme="@style/AppTheme"
-        android:banner="@android:drawable/sym_def_app_icon" android:usesCleartextTraffic="true">
+        android:banner="@drawable/banner" android:icon="@mipmap/ic_launcher" android:usesCleartextTraffic="true">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

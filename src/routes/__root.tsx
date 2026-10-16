@@ -12,6 +12,7 @@ import {
 import {
   LayoutGrid,
   MonitorPlay,
+  Tv,
   Settings2,
   BarChart3,
   Joystick,
@@ -194,6 +195,7 @@ const navItems = [
 
 const setupItems = [
   { to: "/tarif", label: "Pricing", icon: Settings2 },
+  { to: "/station", label: "Station", icon: Tv },
   { to: "/pelanggan", label: "Membership", icon: Users },
   { to: "/kafe", label: "Kafe", icon: Coffee },
   { to: "/promo", label: "Promo", icon: Percent },

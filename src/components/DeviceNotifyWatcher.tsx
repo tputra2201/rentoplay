@@ -3,7 +3,8 @@ import { useEffect, useRef } from "react";
 import { useBilling, remainingSeconds } from "@/lib/billing-store";
 import { useAuth } from "@/lib/auth";
 import { deviceNotifyEnabled, sendDeviceNotify } from "@/lib/device-notify";
-import { tvBridge, tvIps } from "@/lib/tv-notify";
+import { tvBridge, tvConfig, tvIps, tvSchedulePayload } from "@/lib/tv-notify";
+import { useStoreInfo } from "@/lib/store-info";
 
 // Diurutkan dari batas terkecil: yang pertama cocok = tahap terakhir yang dilewati.
 const STAGES = [
@@ -32,6 +33,7 @@ function messageFor(stageId: string, left: number) {
 export function DeviceNotifyWatcher() {
   const { stations, now } = useBilling();
   const { session } = useAuth();
+  const { store } = useStoreInfo(Boolean(session));
   const mountedAt = useRef(Date.now());
   const track = useRef(new Map<string, { end: number; sent: Set<string> }>());
 
@@ -41,6 +43,8 @@ export function DeviceNotifyWatcher() {
     const bridge = tvBridge();
     if (!bridge) return;
     const ips = session ? tvIps() : {};
+    const cfg = tvConfig();
+    const cfgSig = JSON.stringify(cfg) + (store?.logo_url ?? "");
     const want = new Map<string, string>();
     for (const station of stations) {
       const s = station.session;
@@ -48,22 +52,32 @@ export function DeviceNotifyWatcher() {
       if (!s || !ip || s.mode === "open" || s.pausedAt) continue;
       const end = now + remainingSeconds(s, now) * 1000;
       const key = `${station.id}:${s.startAt}`;
-      const sig = `${ip}|${end}`;
+      const sig = `${ip}|${end}|${cfgSig}`;
       want.set(key, sig);
       const prev = tvPlan.current.get(key);
       const prevEnd = prev ? Number(prev.split("|")[1]) : NaN;
-      if (prev?.split("|")[0] !== ip || Math.abs(prevEnd - end) > 5_000) {
-        bridge.schedule(key, ip, station.name, end);
+      const prevCfg = prev ? prev.split("|").slice(2).join("|") : "";
+      if (prev?.split("|")[0] !== ip || Math.abs(prevEnd - end) > 5_000 || prevCfg !== cfgSig) {
+        if (bridge.scheduleJson) {
+          bridge.scheduleJson(
+            key,
+            ip,
+            tvSchedulePayload(cfg, station.name, end, store?.logo_url ?? "", store?.store_name ?? ""),
+          );
+        } else bridge.schedule(key, ip, station.name, end);
         tvPlan.current.set(key, sig);
       }
     }
     for (const key of [...tvPlan.current.keys()]) {
       if (!want.has(key)) {
         bridge.cancel(key);
+        // Sesi diakhiri kasir: lepas layar penuh di TV.
+        const ip = tvPlan.current.get(key)?.split("|")[0];
+        if (ip) bridge.dismiss?.(ip);
         tvPlan.current.delete(key);
       }
     }
-  }, [stations, now, session]);
+  }, [stations, now, session, store]);
 
   useEffect(() => {
     if (!session || !deviceNotifyEnabled()) return;
