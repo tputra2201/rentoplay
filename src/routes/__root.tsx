@@ -12,6 +12,7 @@ import {
 import {
   LayoutGrid,
   MonitorPlay,
+  Tv,
   Settings2,
   BarChart3,
   Joystick,
