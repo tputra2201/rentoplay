@@ -15,6 +15,8 @@ import {
   tvBridge,
   tvConfig,
   tvIps,
+  messageLines,
+  tvMessage,
   type TvNotifyConfig,
 } from "@/lib/tv-notify";
 
@@ -43,7 +45,10 @@ export function TvNotifySettings() {
     const ip = ips[id]?.trim();
     const bridge = tvBridge();
     if (!bridge || !ip) return;
-    bridge.sendNow(ip, `RenToPlay - ${name}`, "Tes notifikasi dari kasir.", "warning");
+    const stage = cfg.stages[0];
+    const title = (stage?.title ?? `${store?.store_name || "RenToPlay"} - ${name}`).replace(/\{menit\}/g, String(stage?.minutes ?? 10));
+    const message = tvMessage(stage?.message ?? "Tes notifikasi dari kasir.", stage?.messageLines).replace(/\{menit\}/g, String(stage?.minutes ?? 10));
+    bridge.sendNow(ip, title, message, "warning");
     toast.success(`Tes dikirim ke ${ip}`);
   };
 
@@ -56,7 +61,7 @@ export function TvNotifySettings() {
       JSON.stringify({
         title: cfg.endTitle,
         subtitle: `${store?.store_name || "RenToPlay"} - ${name}`,
-        message: cfg.endMessage,
+        message: tvMessage(cfg.endMessage, cfg.endMessageLines),
         level: "danger",
         block: true,
         logo: store?.logo_url ?? "",
@@ -114,9 +119,11 @@ export function TvNotifySettings() {
           Tulis {"{menit}"} di pesan untuk menampilkan angka menit.
         </p>
         {cfg.stages.map((s, i) => (
-          <div key={i} className="flex flex-wrap items-center gap-2">
-            <Label className="w-28 shrink-0">Sisa (menit)</Label>
+          <div key={i} className="space-y-3 border-b border-border pb-4">
+            <div className="flex items-center gap-2">
+            <Label htmlFor={`tv-minutes-${i}`} className="w-28 shrink-0">Sisa (menit)</Label>
             <Input
+              id={`tv-minutes-${i}`}
               type="number"
               min={1}
               value={s.minutes}
@@ -124,15 +131,6 @@ export function TvNotifySettings() {
               onChange={(e) => {
                 const stages = [...cfg.stages];
                 stages[i] = { ...s, minutes: Math.max(1, Number(e.target.value) || 1) };
-                update({ ...cfg, stages });
-              }}
-            />
-            <Input
-              value={s.message}
-              className="h-8 min-w-48 flex-1"
-              onChange={(e) => {
-                const stages = [...cfg.stages];
-                stages[i] = { ...s, message: e.target.value };
                 update({ ...cfg, stages });
               }}
             />
@@ -144,6 +142,27 @@ export function TvNotifySettings() {
             >
               <X className="size-4" />
             </Button>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor={`tv-title-${i}`}>Judul</Label>
+              <Input id={`tv-title-${i}`} value={s.title ?? ""} placeholder="Nama store - Station" onChange={(e) => {
+                const stages = [...cfg.stages];
+                stages[i] = { ...s, title: e.target.value || undefined };
+                update({ ...cfg, stages });
+              }} />
+            </div>
+            {[0, 1, 2].map((line) => (
+              <div key={line} className="space-y-1.5">
+                <Label htmlFor={`tv-stage-${i}-line-${line}`}>Message Baris {line + 1}</Label>
+                <Input id={`tv-stage-${i}-line-${line}`} value={(s.messageLines ?? messageLines(s.message))[line] ?? ""} onChange={(e) => {
+                  const lines = [...(s.messageLines ?? messageLines(s.message))];
+                  lines[line] = e.target.value;
+                  const stages = [...cfg.stages];
+                  stages[i] = { ...s, messageLines: lines, message: lines.join("\n") };
+                  update({ ...cfg, stages });
+                }} />
+              </div>
+            ))}
           </div>
         ))}
         <Button
@@ -161,15 +180,21 @@ export function TvNotifySettings() {
       <div className="space-y-3">
         <h2 className="text-xl font-semibold">Saat Waktu Habis</h2>
         <div className="space-y-1.5">
-          <Label>Judul</Label>
-          <Input value={cfg.endTitle} onChange={(e) => update({ ...cfg, endTitle: e.target.value })} />
+          <Label htmlFor="tv-end-title">Judul</Label>
+          <Input id="tv-end-title" value={cfg.endTitle} onChange={(e) => update({ ...cfg, endTitle: e.target.value })} />
         </div>
-        <div className="space-y-1.5">
-          <Label>Pesan</Label>
-          <Input value={cfg.endMessage} onChange={(e) => update({ ...cfg, endMessage: e.target.value })} />
-        </div>
+        {[0, 1, 2].map((line) => (
+          <div key={line} className="space-y-1.5">
+            <Label htmlFor={`tv-end-line-${line}`}>Message Baris {line + 1}</Label>
+            <Input id={`tv-end-line-${line}`} value={(cfg.endMessageLines ?? messageLines(cfg.endMessage))[line] ?? ""} onChange={(e) => {
+              const lines = [...(cfg.endMessageLines ?? messageLines(cfg.endMessage))];
+              lines[line] = e.target.value;
+              update({ ...cfg, endMessageLines: lines, endMessage: lines.join("\n") });
+            }} />
+          </div>
+        ))}
         <label className="flex items-center justify-between rounded-lg bg-secondary/60 p-3">
-          <span>Layar penuh semi transparan + logo store, tetap tampil sampai dilepas kasir</span>
+          <span>Layar penuh 95% gelap + logo store, tetap tampil sampai dilepas kasir</span>
           <Switch checked={cfg.fullscreenEnd} onCheckedChange={(fullscreenEnd) => update({ ...cfg, fullscreenEnd })} />
         </label>
         <Button size="sm" variant="ghost" onClick={() => update(DEFAULT_TV_CONFIG)}>

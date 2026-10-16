@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeDevices, useStoreInfo, type AllowedDevice } from "@/lib/store-info";
 import { friendlyDeviceName } from "@/lib/device-name";
+import { toLogoDataUrl } from "@/lib/logo-image";
 
 import { useBilling } from "@/lib/billing-store";
 import { useAuth } from "@/lib/auth";
@@ -33,21 +34,6 @@ import {
   type CustomAlarm,
 } from "@/lib/alarm";
 
-/** Perkecil gambar agar ringan dan tetap tajam sebagai logo. */
-async function toLogoDataUrl(file: File, max = 256) {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
-  const width = Math.max(1, Math.round(bitmap.width * scale));
-  const height = Math.max(1, Math.round(bitmap.height * scale));
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Tidak bisa memproses gambar");
-  ctx.drawImage(bitmap, 0, 0, width, height);
-  return canvas.toDataURL("image/png");
-}
-
 function LogoSection({
   storeId,
   logoUrl,
@@ -58,6 +44,7 @@ function LogoSection({
   const [secret, setSecret] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [removeBackground, setRemoveBackground] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const save = async (logo: string) => {
@@ -101,10 +88,10 @@ function LogoSection({
       return;
     }
     try {
-      const data = await toLogoDataUrl(file);
+      const data = await toLogoDataUrl(file, 768, removeBackground);
       await save(data);
-    } catch {
-      toast.error("Gambar tidak bisa dibaca.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gambar tidak bisa dibaca.");
     } finally {
       if (fileRef.current) fileRef.current.value = "";
     }
@@ -149,6 +136,11 @@ function LogoSection({
         </div>
       </div>
 
+      <label className="flex items-center justify-between gap-3 text-sm">
+        <span>Hapus latar polos saat unggah</span>
+        <Switch checked={removeBackground} onCheckedChange={setRemoveBackground} aria-label="Hapus latar polos saat unggah" />
+      </label>
+      <p className="text-xs text-muted-foreground">PNG transparan memberikan hasil terbaik. Unggah ulang gambar asli beresolusi tinggi untuk logo lebih tajam.</p>
       <div className="flex flex-wrap gap-2">
         <input
           ref={fileRef}
