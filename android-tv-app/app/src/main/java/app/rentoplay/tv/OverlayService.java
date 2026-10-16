@@ -184,10 +184,11 @@ public final class OverlayService extends Service {
             box.setOrientation(LinearLayout.VERTICAL);
             box.setGravity(Gravity.CENTER);
             box.setPadding(96, 64, 96, 64);
-            box.setBackgroundColor(Color.parseColor("#CC0B0F1A"));
+            box.setBackgroundColor(Color.argb(Math.round(255 * 0.95f), 11, 15, 26));
             if (bmp != null) {
                 ImageView iv = new ImageView(app);
                 iv.setImageBitmap(bmp);
+                iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
                 iv.setAdjustViewBounds(true);
                 iv.setMaxHeight(260);
                 LinearLayout.LayoutParams ip = new LinearLayout.LayoutParams(
@@ -231,20 +232,23 @@ public final class OverlayService extends Service {
                     ? Color.parseColor("#F59E0B") : Color.parseColor("#0891B2");
             LinearLayout card = new LinearLayout(app);
             card.setOrientation(LinearLayout.VERTICAL);
-            card.setPadding(48, 32, 48, 32);
+            card.setPadding(28, 18, 28, 18);
             GradientDrawable bg = new GradientDrawable();
             bg.setColor(Color.parseColor("#E609111F"));
-            bg.setCornerRadius(28);
-            bg.setStroke(8, color);
+            bg.setCornerRadius(16);
+            bg.setStroke(4, color);
             card.setBackground(bg);
             TextView brand = new TextView(app);
             brand.setText("RenToPlay");
-            brand.setTextColor(color); brand.setTextSize(16);
+            brand.setTextColor(color); brand.setTextSize(12);
             TextView t = new TextView(app);
-            t.setText(title); t.setTextColor(Color.WHITE); t.setTextSize(danger ? 34 : 26);
+            t.setText(title); t.setTextColor(Color.WHITE); t.setTextSize(danger ? 34 : 21);
             t.setTypeface(null, android.graphics.Typeface.BOLD);
             TextView m = new TextView(app);
-            m.setText(msg); m.setTextColor(Color.parseColor("#E2E8F0")); m.setTextSize(danger ? 26 : 20);
+            m.setText(msg); m.setTextColor(Color.parseColor("#E2E8F0")); m.setTextSize(danger ? 26 : 17);
+            int compactWidth = Math.min(app.getResources().getDisplayMetrics().widthPixels / 3,
+                    Math.round(360 * app.getResources().getDisplayMetrics().density));
+            if (!danger) { t.setMaxWidth(compactWidth); m.setMaxWidth(compactWidth); }
             card.addView(brand); card.addView(t); card.addView(m);
             int type = Build.VERSION.SDK_INT >= 26 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                     : WindowManager.LayoutParams.TYPE_PHONE;
