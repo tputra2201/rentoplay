@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Perbaiki pemilihan logo di APK kasir, logo pada notifikasi TV, dan Release di samping Pause hanya saat waktu habis; siapkan ZIP Android terbaru.
+
 - [x] Koreksi cetak Bluetooth: bill/struk mempertahankan jarak lama + dua baris; label satu baris + cutter terpisah dari ukuran kertas (data kiriman teruji; hasil fisik menunggu printer pengguna).
 
 - [x] 1. Data Store: hapus hint versi, Manager/Installer boleh ubah perangkat, wildcard IP `192.168.80.*`
