@@ -29,6 +29,7 @@ import { Route as AuthenticatedPenggunaRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedPrinterRouteImport } from './routes/_authenticated/printer'
 import { Route as AuthenticatedPromoRouteImport } from './routes/_authenticated/promo'
 import { Route as AuthenticatedShiftRouteImport } from './routes/_authenticated/shift'
+import { Route as AuthenticatedStationRouteImport } from './routes/_authenticated/station'
 import { Route as AuthenticatedStoreRouteImport } from './routes/_authenticated/store'
 import { Route as AuthenticatedTarifRouteImport } from './routes/_authenticated/tarif'
 import { Route as AuthenticatedTemaRouteImport } from './routes/_authenticated/tema'
@@ -139,6 +140,11 @@ const AuthenticatedShiftRoute = AuthenticatedShiftRouteImport.update({
   path: '/shift',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedStationRoute = AuthenticatedStationRouteImport.update({
+  id: '/station',
+  path: '/station',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedStoreRoute = AuthenticatedStoreRouteImport.update({
   id: '/store',
   path: '/store',
@@ -211,6 +217,7 @@ export interface FileRoutesByFullPath {
   '/printer': typeof AuthenticatedPrinterRoute
   '/promo': typeof AuthenticatedPromoRoute
   '/shift': typeof AuthenticatedShiftRoute
+  '/station': typeof AuthenticatedStationRoute
   '/store': typeof AuthenticatedStoreRoute
   '/tarif': typeof AuthenticatedTarifRoute
   '/tema': typeof AuthenticatedTemaRoute
@@ -241,6 +248,7 @@ export interface FileRoutesByTo {
   '/printer': typeof AuthenticatedPrinterRoute
   '/promo': typeof AuthenticatedPromoRoute
   '/shift': typeof AuthenticatedShiftRoute
+  '/station': typeof AuthenticatedStationRoute
   '/store': typeof AuthenticatedStoreRoute
   '/tarif': typeof AuthenticatedTarifRoute
   '/tema': typeof AuthenticatedTemaRoute
@@ -274,6 +282,7 @@ export interface FileRoutesById {
   '/_authenticated/printer': typeof AuthenticatedPrinterRoute
   '/_authenticated/promo': typeof AuthenticatedPromoRoute
   '/_authenticated/shift': typeof AuthenticatedShiftRoute
+  '/_authenticated/station': typeof AuthenticatedStationRoute
   '/_authenticated/store': typeof AuthenticatedStoreRoute
   '/_authenticated/tarif': typeof AuthenticatedTarifRoute
   '/_authenticated/tema': typeof AuthenticatedTemaRoute
@@ -308,6 +317,7 @@ export interface FileRouteTypes {
     | '/printer'
     | '/promo'
     | '/shift'
+    | '/station'
     | '/store'
     | '/tarif'
     | '/tema'
@@ -338,6 +348,7 @@ export interface FileRouteTypes {
     | '/printer'
     | '/promo'
     | '/shift'
+    | '/station'
     | '/store'
     | '/tarif'
     | '/tema'
@@ -370,6 +381,7 @@ export interface FileRouteTypes {
     | '/_authenticated/printer'
     | '/_authenticated/promo'
     | '/_authenticated/shift'
+    | '/_authenticated/station'
     | '/_authenticated/store'
     | '/_authenticated/tarif'
     | '/_authenticated/tema'
@@ -538,6 +550,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedShiftRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/station': {
+      id: '/_authenticated/station'
+      path: '/station'
+      fullPath: '/station'
+      preLoaderRoute: typeof AuthenticatedStationRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/store': {
       id: '/_authenticated/store'
       path: '/store'
@@ -627,6 +646,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPrinterRoute: typeof AuthenticatedPrinterRoute
   AuthenticatedPromoRoute: typeof AuthenticatedPromoRoute
   AuthenticatedShiftRoute: typeof AuthenticatedShiftRoute
+  AuthenticatedStationRoute: typeof AuthenticatedStationRoute
   AuthenticatedStoreRoute: typeof AuthenticatedStoreRoute
   AuthenticatedTarifRoute: typeof AuthenticatedTarifRoute
   AuthenticatedTemaRoute: typeof AuthenticatedTemaRoute
@@ -650,6 +670,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPrinterRoute: AuthenticatedPrinterRoute,
   AuthenticatedPromoRoute: AuthenticatedPromoRoute,
   AuthenticatedShiftRoute: AuthenticatedShiftRoute,
+  AuthenticatedStationRoute: AuthenticatedStationRoute,
   AuthenticatedStoreRoute: AuthenticatedStoreRoute,
   AuthenticatedTarifRoute: AuthenticatedTarifRoute,
   AuthenticatedTemaRoute: AuthenticatedTemaRoute,
