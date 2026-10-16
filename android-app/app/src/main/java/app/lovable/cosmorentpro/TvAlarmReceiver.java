@@ -15,12 +15,18 @@ import java.nio.charset.StandardCharsets;
 public final class TvAlarmReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context c, Intent i) {
-        int stage = i.getIntExtra("stage", 0);
-        String name = i.getStringExtra("name");
-        String msg = stage == 0 ? "Waktu bermain sudah habis. Terima kasih!"
-                : stage == 120 ? "Sisa waktu bermain 2 menit. Hubungi kasir untuk tambah waktu."
-                : "Sisa waktu bermain 10 menit.";
-        String level = stage == 0 ? "danger" : stage == 120 ? "warning" : "info";
+        String ip = i.getStringExtra("ip");
+        String body = i.getStringExtra("payload");
+        if (body == null) {
+            int stage = i.getIntExtra("stage", 0);
+            String name = i.getStringExtra("name");
+            String msg = stage == 0 ? "Waktu bermain sudah habis. Terima kasih!"
+                    : stage == 120 ? "Sisa waktu bermain 2 menit. Hubungi kasir untuk tambah waktu."
+                    : "Sisa waktu bermain 10 menit.";
+            String level = stage == 0 ? "danger" : stage == 120 ? "warning" : "info";
+            body = json("RenToPlay - " + name, msg, level);
+        }
+        final String payload = body;
         PendingResult pr = goAsync();
         PowerManager pm = (PowerManager) c.getSystemService(Context.POWER_SERVICE);
         PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "rentoplay:tv");
@@ -28,7 +34,7 @@ public final class TvAlarmReceiver extends BroadcastReceiver {
         new Thread(() -> {
             try {
                 // Coba ulang bila Wi-Fi HP baru bangun dari tidur.
-                for (int n = 0; n < 3 && !send(i.getStringExtra("ip"), "RenToPlay - " + name, msg, level); n++) {
+                for (int n = 0; n < 3 && !sendRaw(ip, "/notify", payload); n++) {
                     try { Thread.sleep(1500); } catch (InterruptedException ignored) { }
                 }
             } finally {
@@ -39,20 +45,26 @@ public final class TvAlarmReceiver extends BroadcastReceiver {
     }
 
     static void post(String ip, String title, String message, String level) {
-        new Thread(() -> send(ip, title, message, level)).start();
+        new Thread(() -> sendRaw(ip, "/notify", json(title, message, level))).start();
     }
 
-    static boolean send(String ip, String title, String message, String level) {
-        if (ip == null || ip.isEmpty()) return true;
+    static String json(String title, String message, String level) {
         try {
             JSONObject j = new JSONObject();
             j.put("title", title); j.put("message", message); j.put("level", level);
             j.put("duration", "danger".equals(level) ? 30 : 12);
-            HttpURLConnection con = (HttpURLConnection) new URL("http://" + ip + ":8765/notify").openConnection();
+            return j.toString();
+        } catch (Exception e) { return "{}"; }
+    }
+
+    static boolean sendRaw(String ip, String path, String body) {
+        if (ip == null || ip.isEmpty()) return true;
+        try {
+            HttpURLConnection con = (HttpURLConnection) new URL("http://" + ip + ":8765" + path).openConnection();
             con.setConnectTimeout(4000); con.setReadTimeout(4000);
             con.setRequestMethod("POST"); con.setDoOutput(true);
             con.setRequestProperty("Content-Type", "application/json");
-            try (OutputStream o = con.getOutputStream()) { o.write(j.toString().getBytes(StandardCharsets.UTF_8)); }
+            try (OutputStream o = con.getOutputStream()) { o.write(body.getBytes(StandardCharsets.UTF_8)); }
             int code = con.getResponseCode();
             con.disconnect();
             return code < 500;
