@@ -7,6 +7,8 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.drawable.GradientDrawable;
@@ -21,13 +23,16 @@ import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URL;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -92,12 +97,15 @@ public final class OverlayService extends Service {
             char[] body = new char[len];
             int read = 0;
             while (read < len) { int r = in.read(body, read, len - read); if (r < 0) break; read += r; }
-            String title = "RenToPlay", msg = "", level = "info";
+            String title = "RenToPlay", msg = "", level = "info", subtitle = "", logo = "";
+            boolean block = false;
             int dur = 10;
             if (method.equals("POST") && read > 0) {
                 JSONObject j = new JSONObject(new String(body, 0, read));
                 title = j.optString("title", title); msg = j.optString("message", msg);
                 level = j.optString("level", level); dur = j.optInt("duration", dur);
+                block = j.optBoolean("block", false); subtitle = j.optString("subtitle", "");
+                logo = j.optString("logo", "");
             } else if (path.contains("?")) {
                 for (String kv : path.substring(path.indexOf('?') + 1).split("&")) {
                     String[] p = kv.split("=", 2);
@@ -109,7 +117,9 @@ public final class OverlayService extends Service {
                 }
             }
             boolean show = path.startsWith("/notify") && !method.equals("OPTIONS");
-            if (show) showLocal(this, title, msg, level, dur);
+            if (path.startsWith("/dismiss")) dismissBlock();
+            else if (show && block) showBlock(this, title, subtitle, msg, logo);
+            else if (show) showLocal(this, title, msg, level, dur);
             String res = "{\"ok\":true,\"app\":\"rentoplay-tv\"}";
             OutputStream out = sock.getOutputStream();
             out.write(("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n"
@@ -117,6 +127,71 @@ public final class OverlayService extends Service {
                     + "Content-Length: " + res.length() + "\r\nConnection: close\r\n\r\n" + res).getBytes(StandardCharsets.UTF_8));
             out.flush();
         } catch (Exception ignored) { }
+    }
+
+    private static View blockView;
+
+    /** Lepas layar penuh (dipanggil kasir). */
+    static void dismissBlock() {
+        MAIN.post(() -> {
+            if (blockView == null) return;
+            WindowManager wm = (WindowManager) blockView.getContext().getSystemService(WINDOW_SERVICE);
+            try { wm.removeView(blockView); } catch (Exception ignored) { }
+            blockView = null;
+        });
+    }
+
+    /** Layar penuh semi transparan + logo store; tetap tampil sampai dilepas kasir. */
+    static void showBlock(Context ctx, String title, String subtitle, String msg, String logoUrl) {
+        Context app = ctx.getApplicationContext();
+        Bitmap logo = null;
+        if (logoUrl != null && logoUrl.startsWith("http")) {
+            try (InputStream is = new URL(logoUrl).openStream()) { logo = BitmapFactory.decodeStream(is); }
+            catch (Exception ignored) { }
+        }
+        final Bitmap bmp = logo;
+        MAIN.post(() -> {
+            if (Build.VERSION.SDK_INT >= 23 && !Settings.canDrawOverlays(app)) return;
+            WindowManager wm = (WindowManager) app.getSystemService(WINDOW_SERVICE);
+            if (blockView != null) { try { wm.removeView(blockView); } catch (Exception ignored) { } blockView = null; }
+            LinearLayout box = new LinearLayout(app);
+            box.setOrientation(LinearLayout.VERTICAL);
+            box.setGravity(Gravity.CENTER);
+            box.setPadding(96, 64, 96, 64);
+            box.setBackgroundColor(Color.parseColor("#CC0B0F1A"));
+            if (bmp != null) {
+                ImageView iv = new ImageView(app);
+                iv.setImageBitmap(bmp);
+                iv.setAdjustViewBounds(true);
+                iv.setMaxHeight(260);
+                LinearLayout.LayoutParams ip = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT, 260);
+                ip.bottomMargin = 40;
+                box.addView(iv, ip);
+            }
+            TextView t = new TextView(app);
+            t.setText(title); t.setTextColor(Color.parseColor("#F87171")); t.setTextSize(64);
+            t.setTypeface(null, android.graphics.Typeface.BOLD); t.setGravity(Gravity.CENTER);
+            TextView sub = new TextView(app);
+            sub.setText(subtitle); sub.setTextColor(Color.parseColor("#CBD5E1")); sub.setTextSize(24);
+            sub.setGravity(Gravity.CENTER);
+            TextView m = new TextView(app);
+            m.setText(msg); m.setTextColor(Color.WHITE); m.setTextSize(34); m.setGravity(Gravity.CENTER);
+            m.setPadding(0, 32, 0, 0);
+            box.addView(t); if (subtitle != null && !subtitle.isEmpty()) box.addView(sub); box.addView(m);
+            int type = Build.VERSION.SDK_INT >= 26 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                    : WindowManager.LayoutParams.TYPE_PHONE;
+            WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
+                    WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT, type,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                            | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                    PixelFormat.TRANSLUCENT);
+            try { wm.addView(box, lp); } catch (Exception e) { return; }
+            blockView = box;
+            if (current != null) { try { wm.removeView(current); } catch (Exception ignored) { } current = null; }
+            try { new ToneGenerator(AudioManager.STREAM_NOTIFICATION, 90).startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 1200); }
+            catch (Exception ignored) { }
+        });
     }
 
     static void showLocal(Context ctx, String title, String msg, String level, int seconds) {
