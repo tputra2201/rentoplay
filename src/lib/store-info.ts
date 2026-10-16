@@ -67,6 +67,13 @@ export function useStoreInfo(enabled: boolean) {
   const [loading, setLoading] = useState(enabled);
   /** true bila data store di atas benar-benar baru dibaca dari server (bukan salinan lama). */
   const [fresh, setFresh] = useState(false);
+  const [revision, setRevision] = useState(0);
+
+  useEffect(() => {
+    const refresh = () => setRevision((value) => value + 1);
+    window.addEventListener("rentoplay:store-info-updated", refresh);
+    return () => window.removeEventListener("rentoplay:store-info-updated", refresh);
+  }, []);
 
   useEffect(() => {
     if (!enabled) {
@@ -98,7 +105,7 @@ export function useStoreInfo(enabled: boolean) {
     return () => {
       cancelled = true;
     };
-  }, [enabled]);
+  }, [enabled, revision]);
 
   return { store, loading, fresh };
 }

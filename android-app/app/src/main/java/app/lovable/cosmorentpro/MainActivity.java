@@ -9,12 +9,16 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebChromeClient;
+import android.webkit.ValueCallback;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 public final class MainActivity extends Activity {
     private static final String APP_URL = "https://rentoplay.id";
     private static final int BLUETOOTH_PERMISSION_REQUEST = 41;
+    private static final int FILE_CHOOSER_REQUEST = 42;
+    private ValueCallback<Uri[]> fileChooserCallback;
     private WebView webView;
 
     @Override
@@ -27,7 +31,24 @@ public final class MainActivity extends Activity {
         webView.getSettings().setJavaScriptEnabled(true);
         webView.getSettings().setDomStorageEnabled(true);
         webView.getSettings().setAllowFileAccess(false);
-        webView.getSettings().setAllowContentAccess(false);
+        webView.getSettings().setAllowContentAccess(true);
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback,
+                    FileChooserParams params) {
+                if (fileChooserCallback != null) fileChooserCallback.onReceiveValue(null);
+                fileChooserCallback = callback;
+                try {
+                    startActivityForResult(params.createIntent(), FILE_CHOOSER_REQUEST);
+                } catch (android.content.ActivityNotFoundException e) {
+                    fileChooserCallback = null;
+                    callback.onReceiveValue(null);
+                    android.widget.Toast.makeText(MainActivity.this,
+                            "Tidak ada aplikasi untuk memilih gambar.", android.widget.Toast.LENGTH_LONG).show();
+                }
+                return true;
+            }
+        });
         webView.addJavascriptInterface(new PrintBridge(this, webView), "BillingAndroid");
         webView.addJavascriptInterface(new TvBridge(this), "RenToPlayTV");
         webView.setWebViewClient(new WebViewClient() {
@@ -51,6 +72,24 @@ public final class MainActivity extends Activity {
                 && checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.BLUETOOTH_CONNECT}, BLUETOOTH_PERMISSION_REQUEST);
         }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != FILE_CHOOSER_REQUEST || fileChooserCallback == null) return;
+        ValueCallback<Uri[]> callback = fileChooserCallback;
+        fileChooserCallback = null;
+        callback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (fileChooserCallback != null) {
+            fileChooserCallback.onReceiveValue(null);
+            fileChooserCallback = null;
+        }
+        super.onDestroy();
     }
 
     @Override

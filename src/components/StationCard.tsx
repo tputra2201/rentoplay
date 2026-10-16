@@ -1,4 +1,6 @@
-import { Gamepad2, Clock, Utensils, Infinity as InfinityIcon, Pause, PlayCircle } from "lucide-react";
+import { Gamepad2, Clock, Utensils, Infinity as InfinityIcon, Pause, PlayCircle, MonitorOff } from "lucide-react";
+import { toast } from "sonner";
+import { canReleaseStation, releaseStationScreen } from "@/lib/tv-notify";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCan } from "@/lib/use-can";
@@ -83,6 +85,13 @@ export function StationCard({
     : 0;
   const paid = paidTotal(session);
   const due = Math.max(0, total - paid);
+  const showRelease = canReleaseStation(session?.mode, session ? remainingSeconds(session, now) : Infinity);
+  const release = () => {
+    const result = releaseStationScreen(station.id);
+    if (result === "no-bridge") toast.error("Gunakan APK kasir terbaru untuk melepas layar Station.");
+    else if (result === "no-ip") toast.error("Isi IP layar Station terlebih dahulu di menu Station.");
+    else toast.success(`Perintah Release dikirim ke ${station.name}. Sesi tetap berjalan.`);
+  };
 
   return (
     <div
@@ -90,6 +99,7 @@ export function StationCard({
       tabIndex={0}
       onClick={onClick}
       onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           onClick();
@@ -223,11 +233,11 @@ export function StationCard({
       </div>
 
       {session && (
-        <div className="mt-3" onClick={(e) => e.stopPropagation()}>
+        <div className="mt-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
           {!allow("sesi.jeda") ? null : isPaused(session) ? (
             <Button
               size="sm"
-              className="w-full"
+              className="min-w-0 flex-1 px-2"
               onClick={() => resumeSession(station.id)}
             >
               <PlayCircle className="size-4" /> Lanjutkan
@@ -236,10 +246,15 @@ export function StationCard({
             <Button
               size="sm"
               variant="outline"
-              className="w-full"
+              className="min-w-0 flex-1 px-2"
               onClick={() => pauseSession(station.id)}
             >
               <Pause className="size-4" /> Pause
+            </Button>
+          )}
+          {showRelease && (
+            <Button size="sm" className="min-w-0 flex-1 px-2" onClick={release}>
+              <MonitorOff className="size-4 shrink-0" /> Release
             </Button>
           )}
         </div>

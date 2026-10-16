@@ -48,6 +48,20 @@ export function tvBridge(): TvBridge | null {
   return typeof window !== "undefined" && window.RenToPlayTV ? window.RenToPlayTV : null;
 }
 
+/** Release only dismisses the TV overlay; it never settles or ends a rental. */
+export function canReleaseStation(mode: string | undefined, secondsLeft: number): boolean {
+  return mode !== undefined && mode !== "open" && secondsLeft <= 0;
+}
+
+export function releaseStationScreen(stationId: string): "sent" | "no-bridge" | "no-ip" {
+  const bridge = tvBridge();
+  if (!bridge?.dismiss) return "no-bridge";
+  const ip = tvIps()[stationId]?.trim();
+  if (!ip) return "no-ip";
+  bridge.dismiss(ip);
+  return "sent";
+}
+
 export function tvIps(): Record<string, string> {
   if (typeof window === "undefined") return {};
   try {
