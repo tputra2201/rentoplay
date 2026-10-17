@@ -1,6 +1,6 @@
 # Roadmap
 
-- [x] Temuan monitoring: logo alarm dipisahkan dari PendingIntent dan dipulihkan receiver, DP tetap di PAY-IN periode penerimaan; jarak cetak sudah benar dua baris kosong (temuan stale). 19 tes Bun dan uji JVM bridge/receiver dengan logo 1,8 juta karakter lulus; build OK. APK Kasir 1.4.1 perlu dibuild/install ulang; uji TV/printer fisik belum dilakukan.
+- [x] Temuan monitoring: logo alarm dipisahkan dari PendingIntent dan dipulihkan receiver, DP tetap di PAY-IN periode penerimaan; jarak cetak sudah benar dua baris kosong (temuan stale). 19 tes Bun dan uji JVM bridge/receiver dengan logo 1,8 juta karakter lulus; build OK. ZIP Kasir 1.4.1 siap di Files; APK perlu dibuild/install dan uji TV/printer fisik menunggu perangkat pengguna.
 
 - [x] Tutup akses pemesanan Kafe di panel Station ketika modul mati, pertahankan tagihan lama dan Additional Rental; hapus TV/Table Connect lama dari Setup tanpa mengubah APK Companion. Dua belas tes lulus; sesi berjalan diuji dengan perubahan modul lokal tanpa menyimpan ke store.
 
