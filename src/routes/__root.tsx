@@ -11,7 +11,6 @@ import {
 } from "@tanstack/react-router";
 import {
   LayoutGrid,
-  MonitorPlay,
   Tv,
   Settings2,
   BarChart3,
@@ -203,7 +202,6 @@ const setupItems = [
   { to: "/kas", label: "Finance", icon: Coins },
   { to: "/pengguna", label: "User", icon: UserCog },
   { to: "/printer", label: "Printer", icon: Printer },
-  { to: "/tv", label: "TV Connect", icon: MonitorPlay },
   { to: "/akun", label: "Password", icon: KeyRound },
   { to: "/tema", label: "Tema", icon: Palette },
   { to: "/store", label: "Store", icon: Store },
@@ -256,9 +254,8 @@ function AppShell() {
   const { session, role, fullName, user, signOut, mustChangePassword } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
-  const isTvPage = pathname === "/tv";
   const isPasswordSetupPage = pathname === "/atur-sandi";
-  const isAuthPage = pathname === "/auth" || isPasswordSetupPage || isTvPage;
+  const isAuthPage = pathname === "/auth" || isPasswordSetupPage;
   const [menuOpen, setMenuOpen] = useState(false);
   const { store } = useStoreInfo(Boolean(session));
   const developer = useDeveloper(Boolean(session));
@@ -318,7 +315,6 @@ function AppShell() {
     if (path === "/kartu" && !mods.playingCard) return false;
     if ((path === "/tarif" || path === "/station") && mods.rental === false) return false;
     if ((path === "/payinout" || path === "/kas") && mods.finance === false) return false;
-    if (path === "/tv" && mods.tvConnect === false) return false;
     const key = MENU_PERMISSION[path];
     if (!key) return true;
     return can(role, key, rolePermissions);
@@ -469,7 +465,7 @@ function AppShell() {
                               }}
                             >
                               <Icon className="size-4 shrink-0" />
-                              <span className="truncate">{label === "TV Connect" ? `${businessProfile.unitLabel || "TV"} Connect` : label}</span>
+                              <span className="truncate">{label}</span>
                             </Link>
                           ))}
                         </nav>
@@ -509,7 +505,7 @@ function AppShell() {
                       <DropdownMenuItem key={to} asChild>
                         <Link to={to} className="flex items-center gap-2">
                           <Icon className="size-4 shrink-0" />
-                          {label === "TV Connect" ? `${businessProfile.unitLabel || "TV"} Connect` : label}
+                          {label}
                         </Link>
                       </DropdownMenuItem>
                     ))}
@@ -524,7 +520,7 @@ function AppShell() {
       )}
       <main
         className={
-          isTvPage ? "min-h-screen" : "mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8"
+          "mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8"
         }
       >
         {session && !isAuthPage && expired ? (

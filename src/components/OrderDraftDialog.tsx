@@ -13,6 +13,7 @@ import {
 import { OrderModifierDialog, hasMenuOptions } from "@/components/OrderModifierDialog";
 import { useShiftGate } from "@/components/ShiftGate";
 import { formatRupiah, useBilling, type MenuItem, type OrderItem } from "@/lib/billing-store";
+import { stationModuleAccess } from "@/lib/station-module-access";
 
 /** Satu baris pesanan yang sedang disusun kasir, belum dikirim. */
 export type DraftLine = {
@@ -42,7 +43,8 @@ export function OrderDraftDialog({
   /** Pesanan yang sudah ada di TV/meja ini, untuk indikator jumlah. */
   existing?: OrderItem[];
 }) {
-  const { menu, menuCategories } = useBilling();
+  const { menu, menuCategories, businessProfile } = useBilling();
+  const { canOrderCafe } = stationModuleAccess(businessProfile?.modules, false, false);
   const { requireShift } = useShiftGate();
   const [category, setCategory] = useState<string | null>(null);
   const [lines, setLines] = useState<DraftLine[]>([]);
@@ -62,7 +64,7 @@ export function OrderDraftDialog({
     lines.filter((l) => l.item.id === id).reduce((s, l) => s + l.qty, 0);
 
   const push = (item: MenuItem, mods?: string[], priceAdd = 0) => {
-    if (!requireShift()) return;
+    if (!canOrderCafe || !requireShift()) return;
     const modKey = (mods ?? []).join("·");
     setLines((prev) => {
       const idx = prev.findIndex(
@@ -93,7 +95,7 @@ export function OrderDraftDialog({
         : menu.filter((m) => m.category === category);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open && canOrderCafe} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="font-display text-xl">Tambah Order</DialogTitle>
@@ -297,9 +299,9 @@ export function OrderDraftDialog({
           </Button>
           <Button
             className="flex-1"
-            disabled={lines.length === 0}
+            disabled={!canOrderCafe || lines.length === 0}
             onClick={() => {
-              if (!requireShift()) return;
+              if (!canOrderCafe || !requireShift()) return;
               onSend(lines);
               toast.success(`${lines.length} pesanan dikirim`, {
                 description: sourceName,

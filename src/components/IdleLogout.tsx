@@ -21,8 +21,7 @@ export function IdleLogout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Halaman tampilan TV dibiarkan tetap menyala (tidak ada interaksi di sana).
-  const exempt = pathname.startsWith("/tv") || pathname.startsWith("/auth");
+  const exempt = pathname.startsWith("/auth");
   // Menit idle diatur di Setup → Store. 0 berarti keluar otomatis dimatikan.
   const idleMs = Math.max(0, Math.round(sessionSecurity.idleMinutes)) * 60 * 1000;
 

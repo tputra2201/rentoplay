@@ -7,8 +7,8 @@ import { useBilling } from "@/lib/billing-store";
 
 /**
  * Perangkat yang tidak terdaftar di data store tidak boleh masuk sama sekali,
- * kecuali levelnya Manager, Installer, atau Developer. Layar TV dan halaman
- * masuk dibiarkan apa adanya.
+ * kecuali levelnya Manager, Installer, atau Developer. Halaman masuk
+ * dibiarkan apa adanya.
  *
  * Penolakan hanya dilakukan bila data store benar-benar sudah terbaca dari
  * server dan level pengguna sudah diketahui, supaya tidak ada yang terlempar
@@ -24,7 +24,6 @@ export function DeviceGate() {
 
   useEffect(() => {
     if (
-      pathname.startsWith("/tv") ||
       pathname.startsWith("/auth") ||
       pathname.startsWith("/atur-sandi")
     )
