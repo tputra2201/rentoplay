@@ -400,6 +400,17 @@ function PrinterPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    disabled={!canManage || !androidApp || androidScanning}
+                    onClick={scanAndroid}
+                  >
+                    <RefreshCw className={androidScanning ? "size-4 animate-spin" : "size-4"} />
+                    {androidScanning ? "Memindai…" : "Pindai printer (Bluetooth & BLE)"}
+                  </Button>
                 </DetailField>
               )}
 
