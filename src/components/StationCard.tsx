@@ -253,7 +253,7 @@ export function StationCard({
               <Pause className="size-4" /> Pause
             </Button>
           )}
-          {showRelease && (
+          {showRelease && allow("station.release") && (
             <Button size="sm" className="min-w-0 flex-1 px-2" onClick={release}>
               <MonitorOff className="size-4 shrink-0" /> Release
             </Button>

@@ -45,7 +45,7 @@ export const MENU_PERMISSION: Record<string, string> = {
   "/payinout": "menu.kas",
   "/pembayaran": "menu.pembayaran",
   "/tarif": "menu.tarif",
-  "/station": "menu.tarif",
+  "/station": "menu.station",
   "/laporan": "menu.laporan",
   "/pengguna": "menu.pengguna",
   "/backup": "menu.backup",
@@ -70,6 +70,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
       { key: "menu.kas", label: "Finance" },
       { key: "menu.pembayaran", label: "Payment" },
       { key: "menu.tarif", label: "Pricing" },
+      { key: "menu.station", label: "Station" },
       { key: "menu.laporan", label: "Reports" },
       { key: "menu.pengguna", label: "User" },
       { key: "menu.printer", label: "Printer & Cetak" },
@@ -97,6 +98,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
       { key: "laporan.perangkat", label: "Laporan Transaksi per Perangkat" },
       { key: "laporan.hapus", label: "Hapus data laporan" },
       { key: "laporan.cetak", label: "Cetak laporan" },
+      { key: "laporan.excel", label: "Ekspor Excel / kirim ke email" },
     ],
   },
   {
@@ -107,7 +109,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
       { key: "sesi.kurangiwaktu", label: "Kurangi waktu (berbayar)" },
       { key: "sesi.ekstra", label: "Waktu ekstra tanpa biaya" },
       { key: "sesi.jeda", label: "Jeda / lanjutkan timer" },
-      { key: "sesi.pindah", label: "Pindah TV" },
+      { key: "sesi.pindah", label: "Pindah Station / ganti konsol" },
       { key: "sesi.ubahpelanggan", label: "Ubah data pelanggan sesi" },
       { key: "sesi.addon", label: "Tambah Additional Rental" },
       { key: "sesi.hapusaddon", label: "Hapus item Additional Rental" },
@@ -120,7 +122,8 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
       { key: "sesi.split", label: "Split bill (beberapa metode)" },
       { key: "sesi.batalbayar", label: "Batalkan pembayaran yang sudah masuk" },
       { key: "sesi.akhiri", label: "Akhiri sesi" },
-      { key: "sesi.void", label: "VOID transaksi TV" },
+      { key: "sesi.void", label: "VOID transaksi Station" },
+      { key: "station.release", label: "Release layar TV saat waktu habis" },
       { key: "cetak.struk", label: "Cetak struk / invoice" },
       { key: "cetak.label", label: "Cetak label dapur / bar" },
     ],
@@ -130,8 +133,8 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     items: [
       { key: "shift.checkin", label: "Check-in shift" },
       { key: "shift.closeout", label: "Cash close out" },
-      { key: "kas.tambah", label: "Catat PAY-IN / PAY-OUT" },
-      { key: "kas.hapus", label: "Hapus catatan PAY-IN / PAY-OUT" },
+      { key: "kas.tambah", label: "Catat Finance (Other Revenue, Expenses, Pay-In, Pay-Out)" },
+      { key: "kas.hapus", label: "Hapus catatan Finance" },
       { key: "kartu.jual", label: "Jual Playing Card" },
       { key: "kartu.topup", label: "Top up saldo kartu" },
       { key: "kartu.backup", label: "Buat / unduh backup saldo kartu" },
@@ -167,7 +170,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     label: "Pengaturan",
     items: [
-      { key: "tarif.ubah", label: "Ubah tarif & pengaturan unit" },
+      { key: "tarif.ubah", label: "Ubah tarif, Station & notifikasi TV" },
       { key: "promo.kelola", label: "Kelola promo" },
       { key: "pelanggan.kelola", label: "Kelola data pelanggan" },
       { key: "pembayaran.kelola", label: "Kelola metode pembayaran" },
@@ -221,6 +224,7 @@ export const defaultRolePermissions: Record<AppRole, string[]> = {
     "pembayaran.kelola",
     "backup.export",
     "laporan.cetak",
+    "laporan.excel",
     "kas.hapus",
   ],
   kasir: [
@@ -258,6 +262,7 @@ export const defaultRolePermissions: Record<AppRole, string[]> = {
     "sesi.promo",
     "sesi.gabung",
     "sesi.split",
+    "station.release",
     "kafe.order",
     "kafe.hapusorder",
     "kafe.promo",
@@ -284,6 +289,7 @@ export const defaultRolePermissions: Record<AppRole, string[]> = {
     "sesi.addon",
     "kafe.order",
     "cetak.label",
+    "station.release",
   ],
 };
 
@@ -295,6 +301,9 @@ export type RolePermissions = Partial<Record<string, string[]>>;
  * mengikuti bawaan levelnya supaya tidak ada fitur yang tiba-tiba hilang.
  */
 const ADDED_PERMISSIONS: string[] = [
+  "menu.station",
+  "station.release",
+  "laporan.excel",
   "sesi.kurangiwaktu",
   "sesi.ekstra",
   "sesi.jeda",
