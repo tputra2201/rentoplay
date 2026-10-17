@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Tutup akses pemesanan Kafe di panel Station ketika modul mati, pertahankan tagihan lama dan Additional Rental; hapus TV/Table Connect lama dari Setup tanpa mengubah APK Companion.
+
 - [x] Ringkaskan notifikasi TV, overlay habis 95%, judul/tiga baris pesan, logo lebih tajam dengan pilihan hapus latar polos; ZIP Kasir 1.3.0 dan Companion 1.2.0 siap. Delapan tes lulus dan pengaturan tersimpan melalui layar Station; kompilasi serta uji TV fisik belum dilakukan.
 
 - [x] Perbaiki pemilihan logo di APK kasir, logo pada notifikasi TV, dan Release di samping Pause hanya saat waktu habis; ZIP Android terbaru disiapkan. Aturan Release lulus 3 tes, pemilih logo web terbuka; build/install Android dan uji layar TV menunggu perangkat pengguna.
