@@ -543,6 +543,7 @@ function ControlCenter() {
     city: "",
     expires_date: "",
   });
+  const [newModules, setNewModules] = useState<Record<string, boolean>>({});
   const [invite, setInvite] = useState({ email: "", full_name: "" });
 
   useEffect(() => {
@@ -649,8 +650,17 @@ function ControlCenter() {
     }
     const json = await post(payload, "Store baru dibuat.");
     if (json?.store) {
+      const created = json.store;
+      const disabled = Object.entries(newModules).filter(([, v]) => v === false);
+      if (disabled.length > 0) {
+        await post(
+          { action: "modules", id: created.id, modules: Object.fromEntries(disabled) },
+          "Modul store diatur.",
+        );
+      }
       setNewStore({ store_name: "", store_code: "", city: "", expires_date: "" });
-      openStore(json.store);
+      setNewModules({});
+      openStore(created);
     }
   };
 
