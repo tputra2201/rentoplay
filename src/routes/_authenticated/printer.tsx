@@ -49,7 +49,7 @@ import {
 export const Route = createFileRoute("/_authenticated/printer")({
   head: () => ({
     meta: [
-      { title: "Printer & Cetak — Billing Rental PS" },
+      { title: "Printer & Cetak — RenToPlay" },
       {
         name: "description",
         content:

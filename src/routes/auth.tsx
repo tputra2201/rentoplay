@@ -23,12 +23,12 @@ export const Route = createFileRoute("/auth")({
       {
         name: "description",
         content:
-          "Masuk dengan akun staf yang sudah didaftarkan Admin untuk mengelola billing rental PlayStation.",
+          "Masuk dengan akun staf yang sudah didaftarkan Admin untuk mengelola RenToPlay.",
       },
       { property: "og:title", content: "Masuk Akun — RenToPlay" },
       {
         property: "og:description",
-        content: "Halaman login staf untuk aplikasi billing rental PlayStation.",
+        content: "Halaman login staf untuk aplikasi RenToPlay.",
       },
     ],
   }),

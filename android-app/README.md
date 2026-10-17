@@ -1,6 +1,6 @@
 # RenToPlay Kasir untuk Android
 
-Aplikasi Android ini membuka Billing Rental PS resmi dan mencetak langsung ke printer Bluetooth
+Aplikasi Android ini membuka RenToPlay resmi dan mencetak langsung ke printer Bluetooth
 Classic ESC/POS, termasuk Kassen MT-300 VL 80 mm. RawBT tidak diperlukan.
 
 Versi 1.3.0 meneruskan judul khusus tiap pengingat dan tiga baris pesan dari Menu Station; pemilihan gambar galeri tetap didukung.
@@ -21,7 +21,7 @@ Bundle or APK**. Jangan menyimpan kata sandi atau berkas kunci di repository.
 ## Menggunakan printer
 
 1. Nyalakan Kassen MT-300 VL dan pasangkan melalui pengaturan Bluetooth Android.
-2. Buka aplikasi Billing Rental PS dan izinkan akses perangkat Bluetooth.
+2. Buka aplikasi RenToPlay dan izinkan akses perangkat Bluetooth.
 3. Masuk ke menu **Printer**.
 4. Pada printer struk, pilih **Aplikasi Android — Bluetooth langsung**.
 5. Pilih Kassen dari daftar perangkat, pilih kertas **Thermal 80 mm**, lalu tekan **Uji cetak**.

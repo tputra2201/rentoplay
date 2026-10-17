@@ -44,7 +44,7 @@ function storeBlock(store: PrintStore, layout: DocLayout) {
     Boolean,
   );
   return `
-    <div class="center bold big">${escapeHtml(store?.store_name || "Billing Rental PS")}</div>
+    <div class="center bold big">${escapeHtml(store?.store_name || "RenToPlay")}</div>
     ${lines.map((l) => `<div class="center muted">${escapeHtml(l)}</div>`).join("")}
   `;
 }
@@ -149,7 +149,7 @@ export function receiptText(opts: {
   const lines: string[] = [];
   if (layout.headerText) lines.push(textCenter(layout.headerText, w));
   if (layout.showStoreInfo) {
-    lines.push(textCenter(store?.store_name || "Billing Rental PS", w));
+    lines.push(textCenter(store?.store_name || "RenToPlay", w));
     for (const l of [store?.address, store?.city, store?.phone ? `Telp ${store.phone}` : ""]) {
       if (l) lines.push(textCenter(l, w));
     }

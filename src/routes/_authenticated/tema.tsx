@@ -8,7 +8,7 @@ export const Route = createFileRoute("/_authenticated/tema")({
       {
         name: "description",
         content:
-          "Pilih tema tampilan aplikasi billing rental PlayStation: gelap, kuning, atau berwarna.",
+          "Pilih tema tampilan aplikasi RenToPlay: gelap, kuning, atau berwarna.",
       },
       { property: "og:title", content: "Tema Tampilan — RenToPlay" },
       {

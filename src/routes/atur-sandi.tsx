@@ -18,7 +18,7 @@ export const Route = createFileRoute("/atur-sandi")({
       {
         name: "description",
         content:
-          "Buat kata sandi sendiri lewat tautan undangan dari Admin untuk mulai memakai aplikasi billing rental PlayStation.",
+          "Buat kata sandi sendiri lewat tautan undangan dari Admin untuk mulai memakai aplikasi RenToPlay.",
       },
       { property: "og:title", content: "Buat Kata Sandi — RenToPlay" },
       {

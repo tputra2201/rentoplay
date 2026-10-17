@@ -260,7 +260,7 @@ function BrandingPanel({
           id="login_title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="BILLING RENTAL PS"
+          placeholder="RENTOPLAY"
         />
       </div>
       <div className="grid gap-2">

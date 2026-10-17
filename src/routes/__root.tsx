@@ -349,7 +349,7 @@ function AppShell() {
             )}
             <span className="flex min-w-0 flex-col leading-tight">
               <span className="truncate font-display text-lg font-bold tracking-wide text-neon">
-                {branding.app_name.trim() || storeName || "BILLING RENTAL PS"}
+                {branding.app_name.trim() || storeName || "RENTOPLAY"}
               </span>
 
               {session && storeName && (
