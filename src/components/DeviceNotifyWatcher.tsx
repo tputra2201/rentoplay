@@ -31,7 +31,9 @@ function messageFor(stageId: string, left: number) {
  * yang terlewat tetap dikirim begitu timer berjalan lagi.
  */
 export function DeviceNotifyWatcher() {
-  const { stations, now } = useBilling();
+  const { stations: allStations, now, businessProfile } = useBilling();
+  const tvOn = businessProfile?.modules?.tvConnect !== false;
+  const stations = tvOn ? allStations : [];
   const { session } = useAuth();
   const { store } = useStoreInfo(Boolean(session));
   const mountedAt = useRef(Date.now());

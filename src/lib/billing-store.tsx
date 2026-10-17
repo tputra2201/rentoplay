@@ -627,13 +627,21 @@ export function resolveModuleCategory(categories: CashCategory[], source: Module
 
 /** Modul aktif & label akun SALES bawaan per store. */
 export type BusinessProfile = {
-  modules: { cafe: boolean; booking: boolean; playingCard: boolean };
+  modules: {
+    cafe: boolean;
+    booking: boolean;
+    playingCard: boolean;
+    /** Store lama tanpa nilai = aktif. */
+    rental: boolean;
+    finance: boolean;
+    tvConnect: boolean;
+  };
   salesLabels: { rental: string; fnb: string; addon: string };
   /** Sebutan unit sewa di layar, misal "TV", "Meja", "Lapangan". */
   unitLabel: string;
 };
 export const DEFAULT_BUSINESS_PROFILE: BusinessProfile = {
-  modules: { cafe: true, booking: true, playingCard: true },
+  modules: { cafe: true, booking: true, playingCard: true, rental: true, finance: true, tvConnect: true },
   salesLabels: { rental: "RENTAL", fnb: "F&B", addon: "ADDITIONAL RENTAL" },
   unitLabel: "TV",
 };

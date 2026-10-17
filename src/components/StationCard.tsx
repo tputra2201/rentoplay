@@ -56,6 +56,7 @@ export function StationCard({
     cardMemberDiscountPercent,
     pauseSession,
     resumeSession,
+    businessProfile,
   } = useBilling();
   const allow = useCan();
   const status = stationStatus(station, now, bookings);
@@ -85,7 +86,7 @@ export function StationCard({
     : 0;
   const paid = paidTotal(session);
   const due = Math.max(0, total - paid);
-  const showRelease = canReleaseStation(session?.mode, session ? remainingSeconds(session, now) : Infinity);
+  const showRelease = businessProfile?.modules?.tvConnect !== false && canReleaseStation(session?.mode, session ? remainingSeconds(session, now) : Infinity);
   const release = () => {
     const result = releaseStationScreen(station.id);
     if (result === "no-bridge") toast.error("Gunakan APK kasir terbaru untuk melepas layar Station.");
