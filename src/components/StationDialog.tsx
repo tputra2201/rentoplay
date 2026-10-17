@@ -2,6 +2,7 @@ import { useUnitLabel } from "@/lib/billing-store";
 import { useEffect, useState } from "react";
 import { Ban, Play, Square, Plus, Trash2, Timer, Infinity as InfinityIcon, CheckCircle2, Wallet, AlertTriangle, Printer as PrinterIcon } from "lucide-react";
 import { OrderDraftDialog } from "@/components/OrderDraftDialog";
+import { stationModuleAccess } from "@/lib/station-module-access";
 import { VoidDialog } from "@/components/VoidDialog";
 import { PromoPicker } from "@/components/PromoPicker";
 
@@ -166,6 +167,16 @@ function StationDialogBody({
     unmergeStations,
     linkCafeTable,
   } = useBilling();
+  const moduleAccess = stationModuleAccess(
+    businessProfile?.modules,
+    addonRentals.some((a) => a.active) || Boolean(station.session?.addons?.length),
+    Boolean(station.session?.orders.length),
+  );
+  const activeSection = section === "order" && !moduleAccess.showOrderTab ? "timer" : section;
+  useEffect(() => {
+    if (!moduleAccess.canOrderCafe) setOrderOpen(false);
+    if (!moduleAccess.showOrderTab && section === "order") setSection("timer");
+  }, [moduleAccess.canOrderCafe, moduleAccess.showOrderTab, section]);
   const [mergeOpen, setMergeOpen] = useState(false);
 
   const { requireShift } = useShiftGate();
@@ -353,7 +364,7 @@ function StationDialogBody({
     });
   }, [autoEnd, dueAmount, station, stopSession, onOpenChange]);
 
-  const openCafeTables = businessProfile?.modules?.cafe === false ? [] : cafeTables.filter((t) => t.orders.length > 0);
+  const openCafeTables = moduleAccess.canLinkCafeTable ? cafeTables.filter((t) => t.orders.length > 0) : [];
   // Baris tagihan TV lain yang sudah dipindah ke panel ini.
   const transferredLines = (session?.orders ?? []).filter(
     (o) => o.linkedFrom?.type === "station",
@@ -781,15 +792,15 @@ function StationDialogBody({
           </div>
         ) : (
           <div className="space-y-5">
-            <div className="sticky top-0 z-10 -mx-1 grid grid-cols-3 gap-1 rounded-lg bg-secondary p-1">
-              {(["timer","order","payment"] as const).map((k) => (
-                <button key={k} type="button" onClick={() => setSection(k)}
-                  className={`rounded-md py-1.5 text-sm font-semibold transition-colors ${section === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+            <div className={`sticky top-0 z-10 -mx-1 grid ${moduleAccess.showOrderTab ? "grid-cols-3" : "grid-cols-2"} gap-1 rounded-lg bg-secondary p-1`}>
+              {(["timer","order","payment"] as const).filter((k) => k !== "order" || moduleAccess.showOrderTab).map((k) => (
+                <Button key={k} type="button" variant={activeSection === k ? "default" : "ghost"} onClick={() => setSection(k)}
+                  className="h-auto rounded-md py-1.5 text-sm font-semibold">
                   {k === "timer" ? "Timer" : k === "order" ? "Order" : "Payment"}
-                </button>
+                </Button>
               ))}
             </div>
-            {section === "timer" && (<>
+            {activeSection === "timer" && (<>
             <div className="surface-panel p-4 text-center">
               <p className="text-xs uppercase tracking-wider text-muted-foreground">
                 {session.mode === "open" ? "Waktu berjalan" : "Sisa waktu"}
@@ -1075,7 +1086,7 @@ function StationDialogBody({
               </div>
             )}
             </>)}
-            {section === "order" && (<>
+            {activeSection === "order" && (<>
 
 
             {addonRentals.some((a) => a.active) && allow("sesi.addon") && (
@@ -1231,10 +1242,10 @@ function StationDialogBody({
             )}
 
 
-            <div className="space-y-2">
+            {(moduleAccess.canOrderCafe || session.orders.length > 0) && <div className="space-y-2">
               <p className="text-sm font-medium">Pesanan makanan &amp; minuman</p>
               <div className="flex flex-wrap gap-2">
-                {allow("sesi.order") && (
+                {moduleAccess.canOrderCafe && allow("sesi.order") && (
                 <Button
                   size="sm"
                   onClick={() => {
@@ -1342,9 +1353,9 @@ function StationDialogBody({
                   <PrinterIcon className="size-4" /> Cetak semua label
                 </Button>
               )}
-            </div>
+            </div>}
             </>)}
-            {section === "payment" && (<>
+            {activeSection === "payment" && (<>
             <Separator />
 
             {/* Rincian tagihan dibekukan: tetap terlihat saat blok pembayaran di bawahnya digulir. */}
@@ -1832,13 +1843,14 @@ function StationDialogBody({
       </DialogContent>
     </Dialog>
 
-    {session && (
+    {session && moduleAccess.canOrderCafe && (
       <OrderDraftDialog
         open={orderOpen}
         onOpenChange={setOrderOpen}
         sourceName={station.name}
         existing={session.orders}
         onSend={(lines) => {
+          if (!moduleAccess.canOrderCafe) return;
           for (const line of lines) {
             addOrder(station.id, line.item, line.qty, line.mods, line.priceAdd);
           }
@@ -1850,8 +1862,7 @@ function StationDialogBody({
         <DialogHeader>
           <DialogTitle>Gabung Tagihan ke {station.name}</DialogTitle>
           <DialogDescription>
-            Tagihan {unit} lain dibayar dari panel ini, dan pesanan meja kafe dititipkan ke sesi {unit}
-            ini. Bisa dilepas selama belum dibayar.
+            Tagihan {unit} lain dibayar dari panel ini{moduleAccess.canLinkCafeTable ? `, dan pesanan meja kafe dititipkan ke sesi ${unit} ini` : ""}. Bisa dilepas selama belum dibayar.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -1884,7 +1895,7 @@ function StationDialogBody({
               ))
             )}
           </div>
-          <div className="space-y-2">
+          {moduleAccess.canLinkCafeTable && <div className="space-y-2">
             <p className="text-sm font-semibold">Meja kafe yang ada pesanan</p>
             {openCafeTables.length === 0 ? (
               <p className="text-sm text-muted-foreground">Belum ada pesanan di meja kafe.</p>
@@ -1912,7 +1923,7 @@ function StationDialogBody({
                 </div>
               ))
             )}
-          </div>
+          </div>}
         </div>
         <DialogFooter>
           <Button variant="secondary" onClick={() => setMergeOpen(false)}>

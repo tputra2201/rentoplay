@@ -11,7 +11,6 @@ import {
 } from "@tanstack/react-router";
 import {
   LayoutGrid,
-  MonitorPlay,
   Tv,
   Settings2,
   BarChart3,
@@ -203,7 +202,6 @@ const setupItems = [
   { to: "/kas", label: "Finance", icon: Coins },
   { to: "/pengguna", label: "User", icon: UserCog },
   { to: "/printer", label: "Printer", icon: Printer },
-  { to: "/tv", label: "TV Connect", icon: MonitorPlay },
   { to: "/akun", label: "Password", icon: KeyRound },
   { to: "/tema", label: "Tema", icon: Palette },
   { to: "/store", label: "Store", icon: Store },
@@ -469,7 +467,7 @@ function AppShell() {
                               }}
                             >
                               <Icon className="size-4 shrink-0" />
-                              <span className="truncate">{label === "TV Connect" ? `${businessProfile.unitLabel || "TV"} Connect` : label}</span>
+                              <span className="truncate">{label}</span>
                             </Link>
                           ))}
                         </nav>
@@ -509,7 +507,7 @@ function AppShell() {
                       <DropdownMenuItem key={to} asChild>
                         <Link to={to} className="flex items-center gap-2">
                           <Icon className="size-4 shrink-0" />
-                          {label === "TV Connect" ? `${businessProfile.unitLabel || "TV"} Connect` : label}
+                          {label}
                         </Link>
                       </DropdownMenuItem>
                     ))}
