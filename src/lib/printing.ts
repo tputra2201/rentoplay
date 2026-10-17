@@ -176,6 +176,7 @@ declare global {
     BillingAndroid?: {
       getPairedPrinters: () => string;
       printBase64: (address: string, payload: string) => void;
+      scanPrinters?: () => void;
     };
   }
 }
