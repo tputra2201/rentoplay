@@ -94,7 +94,7 @@ export const PRINT_MODE_LABEL: Record<PrintMode, string> = {
   bluetooth: "Langsung — printer Bluetooth",
   usb: "Langsung — printer USB",
   rawbt: "RawBT (printer Bluetooth lama)",
-  android: "Aplikasi Android RenToPlay (Bluetooth lama)",
+  android: "Aplikasi Android RenToPlay (semua printer Bluetooth)",
 };
 export const PRINT_MODES: PrintMode[] = ["system", "bluetooth", "usb", "rawbt", "android"];
 
@@ -176,6 +176,7 @@ declare global {
     BillingAndroid?: {
       getPairedPrinters: () => string;
       printBase64: (address: string, payload: string) => void;
+      scanPrinters?: () => void;
     };
   }
 }
