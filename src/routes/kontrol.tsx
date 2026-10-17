@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/kontrol")({
   head: () => ({
@@ -58,7 +59,49 @@ type StoreRow = {
   active: boolean;
   expires_at: string | null;
   members?: number;
+  modules?: Record<string, boolean>;
 };
+
+const MODULE_DEFS = [
+  ["rental", "Rental", "Station, Pricing, dan timer sewa unit."],
+  ["cafe", "Kafe (F&B)", "Menu kafe, meja kafe, dan pesanan."],
+  ["booking", "Reservasi", "Pemesanan jadwal dan DP reservasi."],
+  ["playingCard", "Playing Card", "Kartu pelanggan dan top up saldo."],
+  ["finance", "Finance", "Other Revenue, Expenses, Pay-In/Out."],
+  ["tvConnect", "TV Connect", "Notifikasi ke layar TV Companion."],
+] as const;
+
+type ModuleKey = (typeof MODULE_DEFS)[number][0];
+
+/** Saklar modul per store. Nilai `undefined` dianggap aktif (data lama). */
+function ModuleToggles({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: Record<string, boolean>;
+  onChange: (key: ModuleKey, next: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="divide-y divide-border rounded-md border border-border">
+      {MODULE_DEFS.map(([key, label, hint]) => (
+        <label key={key} className="flex items-center justify-between gap-3 p-3">
+          <span>
+            <span className="block font-semibold">{label}</span>
+            <span className="block text-xs text-muted-foreground">{hint}</span>
+          </span>
+          <Switch
+            checked={value[key] !== false}
+            disabled={disabled}
+            onCheckedChange={(v) => onChange(key, v)}
+            aria-label={`Modul ${label}`}
+          />
+        </label>
+      ))}
+    </div>
+  );
+}
 
 type Form = {
   store_code: string;
@@ -500,6 +543,7 @@ function ControlCenter() {
     city: "",
     expires_date: "",
   });
+  const [newModules, setNewModules] = useState<Record<string, boolean>>({});
   const [invite, setInvite] = useState({ email: "", full_name: "" });
 
   useEffect(() => {
@@ -606,8 +650,17 @@ function ControlCenter() {
     }
     const json = await post(payload, "Store baru dibuat.");
     if (json?.store) {
+      const created = json.store;
+      const disabled = Object.entries(newModules).filter(([, v]) => v === false);
+      if (disabled.length > 0) {
+        await post(
+          { action: "modules", id: created.id, modules: Object.fromEntries(disabled) },
+          "Modul store diatur.",
+        );
+      }
       setNewStore({ store_name: "", store_code: "", city: "", expires_date: "" });
-      openStore(json.store);
+      setNewModules({});
+      openStore(created);
     }
   };
 
@@ -789,6 +842,18 @@ function ControlCenter() {
             />
           </div>
         </div>
+        <div className="grid gap-2">
+          <Label>Modul aktif untuk store ini</Label>
+          <ModuleToggles
+            value={newModules}
+            disabled={busy}
+            onChange={(k, v) => setNewModules((m) => ({ ...m, [k]: v }))}
+          />
+          <p className="text-xs text-muted-foreground">
+            Modul yang dimatikan disembunyikan dari menu store tersebut. Bisa diubah lagi
+            kapan saja lewat tombol Kelola.
+          </p>
+        </div>
         <div>
           <Button disabled={busy} onClick={() => void addStore()}>
             <Plus className="size-4" /> Buat store
@@ -895,6 +960,23 @@ function ControlCenter() {
             <Button disabled={busy} onClick={() => void saveStore()}>
               <Save className="size-4" /> Simpan perubahan
             </Button>
+          </div>
+
+          <div className="grid gap-2 border-t border-border pt-4 sm:col-span-2">
+            <h3 className="font-display text-base font-bold">Modul aktif</h3>
+            <p className="text-xs text-muted-foreground">
+              Perubahan tersimpan otomatis dan langsung berlaku untuk store ini begitu
+              perangkatnya tersinkron.
+            </p>
+            <ModuleToggles
+              value={selected.modules ?? {}}
+              disabled={busy}
+              onChange={(k, v) => {
+                const next = { ...(selected.modules ?? {}), [k]: v };
+                setSelected((s) => (s ? { ...s, modules: next } : s));
+                void post({ action: "modules", id: selected.id, modules: { [k]: v } });
+              }}
+            />
           </div>
 
           <div className="grid gap-4 border-t border-border pt-4 sm:col-span-2 sm:grid-cols-2">
