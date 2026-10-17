@@ -796,7 +796,7 @@ const fields: {
 function ModulesSection() {
   const { role } = useAuth();
   const { businessProfile, setBusinessProfile } = useBilling();
-  if (role !== "manager" && role !== "admin") return null;
+  if (!isAdminLevel(role)) return null;
   const rows = [
     ["rental", "Rental", "Station, Pricing, dan timer sewa unit."],
     ["cafe", "Kafe (F&B)", "Menu kafe, meja kafe, dan pesanan makanan/minuman."],
