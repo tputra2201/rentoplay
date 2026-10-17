@@ -291,6 +291,39 @@ export const Route = createFileRoute("/api/public/store-registry")({
           return Response.json({ ok: true, emailSent, user_id: devId });
         }
 
+        if (body.action === "modules") {
+          // Modul aktif disimpan di baris pengaturan `businessProfile` milik store,
+          // digabung dengan isi lama agar pengaturan lain (label unit dsb.) utuh.
+          const { data: existing } = await supabaseAdmin
+            .from("store_data")
+            .select("payload")
+            .eq("store_id", body.id)
+            .eq("kind", "settings")
+            .eq("entity_id", "businessProfile")
+            .maybeSingle();
+          const oldProfile =
+            ((existing as { payload?: { businessProfile?: Record<string, unknown> } } | null)
+              ?.payload?.businessProfile ?? {}) as Record<string, unknown>;
+          const oldModules = (oldProfile.modules ?? {}) as Record<string, unknown>;
+          const nextProfile = {
+            ...oldProfile,
+            modules: { ...oldModules, ...body.modules },
+          };
+          const { error } = await supabaseAdmin.from("store_data").upsert(
+            {
+              store_id: body.id,
+              kind: "settings",
+              entity_id: "businessProfile",
+              payload: { businessProfile: nextProfile },
+              deleted: false,
+              updated_at: new Date().toISOString(),
+            } as never,
+            { onConflict: "store_id,kind,entity_id" },
+          );
+          if (error) return new Response(error.message, { status: 500 });
+          return Response.json({ ok: true, modules: nextProfile.modules });
+        }
+
         // assign: tautkan / undang akun sebagai pengelola store ini
         const { data: list, error: listError } = await supabaseAdmin.auth.admin.listUsers({
           page: 1,
