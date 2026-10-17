@@ -62,6 +62,11 @@ const bodySchema = z.discriminatedUnion("action", [
     user_id: z.string().uuid(),
   }),
   z.object({
+    action: z.literal("modules"),
+    id: z.string().uuid(),
+    modules: z.record(z.string().max(40), z.boolean()),
+  }),
+  z.object({
     action: z.literal("assign"),
     id: z.string().uuid(),
     email: z.string().email(),
