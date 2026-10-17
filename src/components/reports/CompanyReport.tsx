@@ -20,8 +20,8 @@ import {
   shiftSummary,
   useBilling,
   type HistoryRecord,
-  usedBookingDpIds,
 } from "@/lib/billing-store";
+import { companyPayInRows } from "@/lib/company-pay-in";
 import { inRange, rangeLabel, type ReportRange } from "@/lib/report-range";
 
 type Row = { label: string; amount: number; qty?: number };
@@ -146,18 +146,7 @@ export function CompanyReport({ range }: { range: ReportRange }) {
     }
   }
 
-  const payInRows = new Map<string, Row>();
-  const usedDp = usedBookingDpIds(cashEntries);
-  for (const e of cash) {
-    if (e.direction !== "in" || !e.payout) continue;
-    if (usedDp.has(e.id)) continue; // DP sudah check-in → sudah jadi SALES
-    const label = entrySource(e) === "booking-dp"
-      ? "DP RESERVASI"
-      : entrySource(e) === "card-topup"
-        ? "TOP UP PLAYING CARD"
-        : "TAMBAHAN KAS MASUK";
-    bump(payInRows, label, e.amount, 1);
-  }
+  const payInRows = companyPayInRows(cash.map((e) => ({ ...e, source: entrySource(e) })));
 
   const payOutRows = new Map<string, Row>();
   for (const e of cash) {

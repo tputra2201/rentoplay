@@ -11,6 +11,7 @@
 
 - Financial screens use one shared vocabulary: Revenue, Payments, Pay-In, Pay-Out, Cash In/Out, Cash Expected/Actual, Balance Cash, and Next Start Cash, so cashier and owner figures reconcile.
 - Cash items carry a standard account (sales/other/payin/expense/payout) and automatic modules resolve their item via Account Mapping (mapFor + entry.source); reports must read entryAccount/entrySource, never hardcoded category ids — so stores can name their own COA.
+- Company Report aggregates incoming PAY-IN from period-filtered cash entries without matching later deposit-use records; its pure aggregation is tested independently. Why: later check-in must not erase a receipt from an earlier period.
 - Per-store module toggles and SALES labels live in the synced setting businessProfile; nav/route access checks businessProfile.modules — so each store can switch off Kafe/Reservasi/Playing Card.
 - Station ordering uses stationModuleAccess for Cafe entry points; existing bills and rental add-ons stay accessible when Cafe is disabled, so module changes do not alter financial history.
 - On app open while online, a device first pulls central changes since its last sync; rows changed centrally discard that device's stale queued edits (server wins). Offline uses the local cache. Logout keeps the cache. Why: stale devices overwrote live cashier data without costing a full re-download.
