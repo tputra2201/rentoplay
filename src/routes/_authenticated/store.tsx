@@ -9,7 +9,7 @@ import { friendlyDeviceName } from "@/lib/device-name";
 import { toLogoDataUrl } from "@/lib/logo-image";
 
 import { useBilling } from "@/lib/billing-store";
-import { useAuth } from "@/lib/auth";
+import { isAdminLevel, useAuth } from "@/lib/auth";
 import { useDeviceAccess } from "@/lib/device-guard";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
