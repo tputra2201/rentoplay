@@ -318,7 +318,7 @@ export const Route = createFileRoute("/api/public/store-registry")({
           const oldProfile =
             ((existing as { payload?: { businessProfile?: Record<string, unknown> } } | null)
               ?.payload?.businessProfile ?? {}) as Record<string, unknown>;
-          const oldModules = (oldProfile.modules ?? {}) as Record<string, unknown>;
+          const oldModules = (oldProfile["modules"] ?? {}) as Record<string, unknown>;
           const nextProfile = {
             ...oldProfile,
             modules: { ...oldModules, ...body.modules },
