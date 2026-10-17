@@ -138,19 +138,33 @@ export const Route = createFileRoute("/api/public/store-registry")({
         if (auth !== "ok") return denied(auth);
         const { admin: supabaseAdmin, error: adminError } = await loadAdmin();
         if (!supabaseAdmin) return adminError!;
-        const [{ data, error }, { data: members }, { data: developers }] = await Promise.all([
-          supabaseAdmin.from("stores").select(columns).order("created_at"),
-          supabaseAdmin.from("store_members").select("store_id"),
-          supabaseAdmin.from("developer_accounts").select("user_id, email, created_at"),
-        ]);
+        const [{ data, error }, { data: members }, { data: developers }, { data: profiles }] =
+          await Promise.all([
+            supabaseAdmin.from("stores").select(columns).order("created_at"),
+            supabaseAdmin.from("store_members").select("store_id"),
+            supabaseAdmin.from("developer_accounts").select("user_id, email, created_at"),
+            supabaseAdmin
+              .from("store_data")
+              .select("store_id, payload")
+              .eq("kind", "settings")
+              .eq("entity_id", "businessProfile"),
+          ]);
         if (error) return new Response(error.message, { status: 500 });
         const counts = new Map<string, number>();
         for (const row of (members ?? []) as { store_id: string }[]) {
           counts.set(row.store_id, (counts.get(row.store_id) ?? 0) + 1);
         }
+        const modulesByStore = new Map<string, Record<string, unknown>>();
+        for (const row of (profiles ?? []) as {
+          store_id: string;
+          payload: { businessProfile?: { modules?: Record<string, unknown> } };
+        }[]) {
+          modulesByStore.set(row.store_id, row.payload?.businessProfile?.modules ?? {});
+        }
         const stores = ((data ?? []) as { id: string }[]).map((row) => ({
           ...row,
           members: counts.get(row.id) ?? 0,
+          modules: modulesByStore.get(row.id) ?? {},
         }));
         return Response.json({ stores, developers: developers ?? [] });
       },
