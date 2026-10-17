@@ -38,7 +38,7 @@ export const Route = createFileRoute("/_authenticated/station")({
 });
 
 function StationPage() {
-  const { stations, addStation, setStationConsole, removeStation, updateStation, reorderList, consoleTypes } =
+  const { stations, addStation, setStationConsole, removeStation, updateStation, reorderList, consoleTypes, businessProfile } =
     useBilling();
   const [name, setName] = useState("");
   const [booth, setBooth] = useState("");
@@ -219,9 +219,11 @@ function StationPage() {
           )}
         />
       </section>
+      {businessProfile?.modules?.tvConnect !== false && (
       <section className="surface-panel p-4 sm:p-6">
         <TvNotifySettings />
       </section>
+      )}
     </div>
   );
 }

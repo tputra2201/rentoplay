@@ -798,9 +798,12 @@ function ModulesSection() {
   const { businessProfile, setBusinessProfile } = useBilling();
   if (role !== "manager" && role !== "admin") return null;
   const rows = [
+    ["rental", "Rental", "Station, Pricing, dan timer sewa unit."],
     ["cafe", "Kafe (F&B)", "Menu kafe, meja kafe, dan pesanan makanan/minuman."],
     ["booking", "Reservasi", "Pemesanan jadwal dan DP reservasi."],
     ["playingCard", "Playing Card", "Kartu pelanggan, penjualan kartu, dan top up saldo."],
+    ["finance", "Finance", "Other Revenue, Expenses, Pay-In, dan Pay-Out."],
+    ["tvConnect", "TV Connect", "Notifikasi ke layar TV Companion dan tombol Release."],
   ] as const;
   return (
     <section className="surface-panel space-y-4 p-5">
@@ -828,7 +831,7 @@ function ModulesSection() {
               <span className="block text-xs text-muted-foreground">{hint}</span>
             </span>
             <Switch
-              checked={businessProfile.modules[key]}
+              checked={businessProfile.modules[key] !== false}
               onCheckedChange={(v) => setBusinessProfile({ modules: { [key]: v } })}
               aria-label={`Modul ${label}`}
             />

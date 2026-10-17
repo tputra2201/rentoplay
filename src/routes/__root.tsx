@@ -316,6 +316,9 @@ function AppShell() {
     if (path === "/kafe" && !mods.cafe) return false;
     if (path === "/booking" && !mods.booking) return false;
     if (path === "/kartu" && !mods.playingCard) return false;
+    if ((path === "/tarif" || path === "/station") && mods.rental === false) return false;
+    if ((path === "/payinout" || path === "/kas") && mods.finance === false) return false;
+    if (path === "/tv" && mods.tvConnect === false) return false;
     const key = MENU_PERMISSION[path];
     if (!key) return true;
     return can(role, key, rolePermissions);
