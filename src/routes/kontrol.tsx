@@ -842,6 +842,18 @@ function ControlCenter() {
             />
           </div>
         </div>
+        <div className="grid gap-2">
+          <Label>Modul aktif untuk store ini</Label>
+          <ModuleToggles
+            value={newModules}
+            disabled={busy}
+            onChange={(k, v) => setNewModules((m) => ({ ...m, [k]: v }))}
+          />
+          <p className="text-xs text-muted-foreground">
+            Modul yang dimatikan disembunyikan dari menu store tersebut. Bisa diubah lagi
+            kapan saja lewat tombol Kelola.
+          </p>
+        </div>
         <div>
           <Button disabled={busy} onClick={() => void addStore()}>
             <Plus className="size-4" /> Buat store
@@ -948,6 +960,23 @@ function ControlCenter() {
             <Button disabled={busy} onClick={() => void saveStore()}>
               <Save className="size-4" /> Simpan perubahan
             </Button>
+          </div>
+
+          <div className="grid gap-2 border-t border-border pt-4 sm:col-span-2">
+            <h3 className="font-display text-base font-bold">Modul aktif</h3>
+            <p className="text-xs text-muted-foreground">
+              Perubahan tersimpan otomatis dan langsung berlaku untuk store ini begitu
+              perangkatnya tersinkron.
+            </p>
+            <ModuleToggles
+              value={selected.modules ?? {}}
+              disabled={busy}
+              onChange={(k, v) => {
+                const next = { ...(selected.modules ?? {}), [k]: v };
+                setSelected((s) => (s ? { ...s, modules: next } : s));
+                void post({ action: "modules", id: selected.id, modules: { [k]: v } });
+              }}
+            />
           </div>
 
           <div className="grid gap-4 border-t border-border pt-4 sm:col-span-2 sm:grid-cols-2">
