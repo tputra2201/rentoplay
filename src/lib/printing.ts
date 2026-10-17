@@ -266,7 +266,7 @@ export function printViaAndroid(printer: PrinterConfig, text: string) {
   if (!window.BillingAndroid) {
     window.dispatchEvent(
       new CustomEvent("billing-android-print", {
-        detail: { ok: false, message: "Buka halaman ini dari aplikasi Android Billing Rental PS" },
+        detail: { ok: false, message: "Buka halaman ini dari aplikasi Android RenToPlay" },
       }),
     );
     return false;

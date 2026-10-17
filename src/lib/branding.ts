@@ -17,7 +17,7 @@ export type Branding = {
 export const defaultBranding: Branding = {
   logo_url: "",
   app_icon_url: "",
-  login_title: "BILLING RENTAL PS",
+  login_title: "RENTOPLAY",
   login_note: "",
   app_name: "",
   app_version: "",

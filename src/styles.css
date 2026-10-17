@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Billing Rental PS — dark gaming design system.
+ * RenToPlay — dark gaming design system.
  * Neon electric blue (primary) + neon green (accent) on deep space navy.
  * All colors are oklch tokens; never hardcode colors in components.
  */

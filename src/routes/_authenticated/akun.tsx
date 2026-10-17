@@ -15,7 +15,7 @@ export const Route = createFileRoute("/_authenticated/akun")({
       { title: "Akun Saya — RenToPlay" },
       {
         name: "description",
-        content: "Ubah kata sandi akun staf pada aplikasi billing rental PlayStation.",
+        content: "Ubah kata sandi akun staf pada aplikasi RenToPlay.",
       },
       { property: "og:title", content: "Akun Saya — RenToPlay" },
       {

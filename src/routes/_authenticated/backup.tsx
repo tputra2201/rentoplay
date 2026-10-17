@@ -28,7 +28,7 @@ export const Route = createFileRoute("/_authenticated/backup")({
       { property: "og:title", content: "Backup & Restore Data — RenToPlay" },
       {
         property: "og:description",
-        content: "Backup Excel, restore, dan reset data aplikasi billing rental PS.",
+        content: "Backup Excel, restore, dan reset data aplikasi RenToPlay.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
