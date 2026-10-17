@@ -1,7 +1,7 @@
 type PayInEntry = {
   direction: "in" | "out";
   payout: boolean;
-  source?: string;
+  source?: string | undefined;
   amount: number;
 };
 
