@@ -88,9 +88,28 @@ function PrinterPage() {
 
   const [deviceNames, setDeviceNames] = useState<Record<string, string>>({});
 
+  const [androidScanning, setAndroidScanning] = useState(false);
   useEffect(() => {
-    if (androidApp) setPairedPrinters(pairedAndroidPrinters());
+    if (!androidApp) return;
+    setPairedPrinters(pairedAndroidPrinters());
+    const onScan = (e: Event) => {
+      setAndroidScanning(false);
+      const d = (e as CustomEvent<{ ok: boolean; message?: string }>).detail;
+      if (d && !d.ok && d.message) toast.error(d.message);
+      setPairedPrinters(pairedAndroidPrinters());
+    };
+    window.addEventListener("billing-android-printers", onScan);
+    return () => window.removeEventListener("billing-android-printers", onScan);
   }, [androidApp]);
+  const scanAndroid = () => {
+    if (!window.BillingAndroid?.scanPrinters) {
+      toast.error("Perbarui APK Kasir ke versi 1.4 untuk memindai printer BLE.");
+      setPairedPrinters(pairedAndroidPrinters());
+      return;
+    }
+    setAndroidScanning(true);
+    window.BillingAndroid.scanPrinters();
+  };
 
   useEffect(() => {
     const map: Record<string, string> = {};
