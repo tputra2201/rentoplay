@@ -199,11 +199,13 @@ function LaporanPage() {
             {allow("laporan.cetak") && (
               <PrintReportButton targetRef={reportRef} title="Laporan" label="Cetak laporan" />
             )}
-            <ExportExcelButton
-              targetRef={reportRef}
-              title={`Laporan ${storeName}`}
-              periodText={`Periode: ${rangeLabel(range)}`}
-            />
+            {allow("laporan.excel") && (
+              <ExportExcelButton
+                targetRef={reportRef}
+                title={`Laporan ${storeName}`}
+                periodText={`Periode: ${rangeLabel(range)}`}
+              />
+            )}
           </div>
         </div>
 
