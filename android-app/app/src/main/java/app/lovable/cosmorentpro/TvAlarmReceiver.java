@@ -27,14 +27,27 @@ public final class TvAlarmReceiver extends BroadcastReceiver {
             body = json("RenToPlay - " + name, msg, level);
         }
         final String payload = body;
+        final String logoKey = i.getStringExtra("logoKey");
         PendingResult pr = goAsync();
         PowerManager pm = (PowerManager) c.getSystemService(Context.POWER_SERVICE);
         PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "rentoplay:tv");
         wl.acquire(15_000);
         new Thread(() -> {
             try {
+                // Restore the logo after alarm delivery, outside Binder and on the worker.
+                String outgoing = payload;
+                if (logoKey != null) {
+                    try {
+                        JSONObject document = new JSONObject(payload);
+                        document.put("logo", c.getSharedPreferences(TvBridge.LOGO_PREFS, Context.MODE_PRIVATE)
+                                .getString(logoKey, ""));
+                        outgoing = document.toString();
+                    } catch (Exception e) {
+                        android.util.Log.w("RenToPlayTV", "Sending alert without stored logo", e);
+                    }
+                }
                 // Coba ulang bila Wi-Fi HP baru bangun dari tidur.
-                for (int n = 0; n < 3 && !sendRaw(ip, "/notify", payload); n++) {
+                for (int n = 0; n < 3 && !sendRaw(ip, "/notify", outgoing); n++) {
                     try { Thread.sleep(1500); } catch (InterruptedException ignored) { }
                 }
             } finally {
