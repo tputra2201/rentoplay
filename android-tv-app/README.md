@@ -2,7 +2,7 @@
 
 Dipasang di setiap TV. Menampilkan kartu notifikasi di atas layar PS (HDMI).
 
-Versi 1.5.0 menambah perintah bangun layar dari dalam jaringan (dipakai saat Wake-on-LAN diblokir router Wi-Fi), pengaturan TV global sekali isi untuk semua unit, dan daftar station accordion di kasir. Pola remote 4–6 tombol arah/OK, volume, Home/HDMI, standby opsional dan layar waktu habis hitam pekat tetap tersedia. Release Splash tidak memulai billing/timer.
+Versi 1.5.1 memperbaiki perintah bangun layar (izin WAKE_LOCK dan penahanan wake lock) yang sebelumnya gagal diam-diam. Versi 1.5.0 menambah perintah bangun layar dari dalam jaringan (dipakai saat Wake-on-LAN diblokir router Wi-Fi), pengaturan TV global sekali isi untuk semua unit, dan daftar station accordion di kasir. Pola remote 4–6 tombol arah/OK, volume, Home/HDMI, standby opsional dan layar waktu habis hitam pekat tetap tersedia. Release Splash tidak memulai billing/timer.
 Build ulang dan pasang APK pembaruan di setiap TV. Overlay hanya menutupi gambar, tidak memutus HDMI atau mengunci konsol.
 Untuk logo tajam/transparan, unggah ulang PNG transparan beresolusi tinggi melalui Data Store; tersedia pilihan hapus latar polos.
 
@@ -16,7 +16,7 @@ Disarankan IP TV dibuat tetap (DHCP reservation di router).
 
 ## Pengaturan kontrol TV
 
-1. Pasang pembaruan Companion 1.5.0 dan Kasir 1.6.0 tanpa uninstall, dengan kunci penandatanganan yang sama.
+1. Pasang pembaruan Companion 1.5.1 dan Kasir 1.6.0 tanpa uninstall, dengan kunci penandatanganan yang sama.
 2. Buka Companion, salin IP dan kode kontrol ke Setup → Station di APK kasir. Kode ini rahasia; jaringan lokal harus tepercaya (HTTP tidak terenkripsi).
 3. Isi MAC TV, buat pola 4–6 tombol arah/OK di Setup Station, isi judul dan ucapan sambutan. Aktifkan Splash saat TV dinyalakan, lalu **Kirim Pengaturan ke TV**. Logo dan nama store ikut disimpan di TV. Mengubah pengaturan kasir saja belum memperbarui TV. Tidak ada pola bawaan; PIN angka lama tetap berlaku sampai pengaturan baru dikirim.
 4. Untuk standby, aktifkan **RenToPlay TV — Standby** di Aksesibilitas TV. Layanan tidak membaca isi layar; memakai aksi kunci layar Android, yang hasilnya bergantung model TV.

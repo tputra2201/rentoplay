@@ -216,14 +216,18 @@ public final class OverlayService extends Service {
         if (action.equals("wake")) {
             // Bangunkan layar dari dalam jaringan: WoL sering diblokir router Wi-Fi,
             // sedangkan Companion tetap bisa dihubungi selama Wi-Fi TV hidup.
+            // Wake lock ditahan 10 detik — dilepas langsung membuat layar kembali padam
+            // sebelum sempat menyala.
             MAIN.post(() -> {
                 try {
                     android.os.PowerManager pm = (android.os.PowerManager) getSystemService(POWER_SERVICE);
-                    android.os.PowerManager.WakeLock lock = pm.newWakeLock(
-                        android.os.PowerManager.FULL_WAKE_LOCK | android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP | android.os.PowerManager.ON_AFTER_RELEASE,
-                        "rentoplay:wake");
-                    lock.acquire(10000);
-                    lock.release();
+                    if (pm != null && !pm.isInteractive()) {
+                        android.os.PowerManager.WakeLock lock = pm.newWakeLock(
+                            android.os.PowerManager.FULL_WAKE_LOCK | android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP | android.os.PowerManager.ON_AFTER_RELEASE,
+                            "rentoplay:wake");
+                        lock.acquire(10000);
+                        MAIN.postDelayed(() -> { try { if (lock.isHeld()) lock.release(); } catch (Exception ignored) { } }, 10000);
+                    }
                 } catch (Exception ignored) { }
                 if (controlPrefs(this).getBoolean("enabled", false)) showWelcome(this);
             });
