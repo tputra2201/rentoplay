@@ -213,6 +213,22 @@ public final class OverlayService extends Service {
         }
         if (action.equals("splash")) { showWelcome(this); result.put("ok", controlPrefs(this).getBoolean("enabled", false)); if (!result.getBoolean("ok")) result.put("error", "Aktifkan dan kirim pengaturan splash terlebih dahulu."); return result; }
         if (action.equals("releaseSplash")) { dismissSplash(); result.put("ok", true); return result; }
+        if (action.equals("wake")) {
+            // Bangunkan layar dari dalam jaringan: WoL sering diblokir router Wi-Fi,
+            // sedangkan Companion tetap bisa dihubungi selama Wi-Fi TV hidup.
+            MAIN.post(() -> {
+                try {
+                    android.os.PowerManager pm = (android.os.PowerManager) getSystemService(POWER_SERVICE);
+                    android.os.PowerManager.WakeLock lock = pm.newWakeLock(
+                        android.os.PowerManager.FULL_WAKE_LOCK | android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP | android.os.PowerManager.ON_AFTER_RELEASE,
+                        "rentoplay:wake");
+                    lock.acquire(10000);
+                    lock.release();
+                } catch (Exception ignored) { }
+                if (controlPrefs(this).getBoolean("enabled", false)) showWelcome(this);
+            });
+            result.put("ok", true); return result;
+        }
         java.util.concurrent.FutureTask<JSONObject> task = new java.util.concurrent.FutureTask<>(() -> {
             JSONObject r = new JSONObject(); r.put("ok", true);
             try {
