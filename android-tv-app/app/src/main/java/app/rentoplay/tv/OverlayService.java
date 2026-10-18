@@ -323,7 +323,7 @@ public final class OverlayService extends Service {
             box.setOrientation(LinearLayout.VERTICAL);
             box.setGravity(Gravity.CENTER);
             box.setPadding(96, 64, 96, 64);
-            box.setBackgroundColor(Color.argb(Math.round(255 * 0.95f), 11, 15, 26));
+            box.setBackgroundColor(Color.rgb(0, 0, 0));
             if (bmp != null) {
                 ImageView iv = new ImageView(app);
                 iv.setImageBitmap(bmp);
