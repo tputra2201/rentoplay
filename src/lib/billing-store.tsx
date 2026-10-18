@@ -3349,7 +3349,6 @@ export function BillingProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const dirtySettings = useCallback(() => dirtyRef.current, []);
 
   // Perubahan Jenis Konsol & Tarif yang datang dari pusat dicatat, supaya kalau
   // suatu perangkat menimpanya lagi jelas terlihat kapan dan menjadi apa.
@@ -3376,7 +3375,6 @@ export function BillingProvider({ children }: { children: ReactNode }) {
     hydrated,
     enabled: Boolean(authSession),
     storageLoaded,
-    dirtySettings,
     intents: intentsRef,
     applyRemote,
     bindStore,

@@ -94,7 +94,7 @@ async function fetchAllStoreData(
       .from("store_data")
       .select("kind, entity_id, payload, deleted, updated_at")
       .eq("store_id", storeId);
-    if (since) q = q.gt("updated_at", since);
+    if (since) q = q.gte("updated_at", since);
     // Hanya unduhan pertama (perangkat kosong) yang boleh melewati baris
     // terhapus. Audit penuh WAJIB menerimanya agar penghapusan yang
     // terlewat tetap dibersihkan dan kursor tidak melompatinya.
@@ -173,8 +173,6 @@ export function useStoreSync(options: {
    * pusat sebelum boleh mengirim apa pun.
    */
   storageLoaded: boolean;
-  /** Kunci pengaturan yang memang diubah di perangkat ini. */
-  dirtySettings: () => Set<string>;
   intents: IntentQueue;
   applyRemote: (apply: (prev: BillingSnapshot) => BillingSnapshot) => void;
   /**
@@ -183,7 +181,7 @@ export function useStoreSync(options: {
    */
   bindStore: (storeId: string, keepLocal?: boolean) => void;
 }): SyncStatus {
-  const { state, hydrated, enabled, storageLoaded, dirtySettings, intents, applyRemote, bindStore } =
+  const { state, hydrated, enabled, storageLoaded, intents, applyRemote, bindStore } =
     options;
 
   const [online, setOnline] = useState(true);
@@ -380,71 +378,9 @@ export function useStoreSync(options: {
       Object.keys(shadowRef.current).length > 0 ||
       Object.keys(outboxRef.current).length > 0 ||
       Boolean(localStorage.getItem(SINCE_KEY));
-    const hasCompleteBaseline =
-      localStorage.getItem(BASELINE_KEY) === `${storeId}:${BASELINE_VERSION}`;
-    // Jejak sinkron lama hanya bisa dipercaya bila data lokalnya juga benar-benar
-    // terbaca. Kalau data lokal hilang (penyimpanan penuh/rusak) sementara
-    // jejaknya masih ada, perangkat ini akan mengirim isi bawaan ke pusat —
-    // inilah yang membuat Jenis Konsol & Tarif ter-reset. Paksa ambil ulang.
-    if (hasSyncHistory && storageLoaded && hasCompleteBaseline && !navigator.onLine) {
-      // Tanpa internet: pakai data perangkat supaya kasir tetap bisa bekerja.
-      if (typeof navigator !== "undefined" && !navigator.onLine) {
-        bootstrappedRef.current = true;
-        setReadyStoreId(storeId);
-        return;
-      }
-      // Daring: susul dulu perubahan pusat sejak terakhir tersambung (hanya
-      // baris yang berubah — hemat kuota). Baris yang sudah diubah perangkat
-      // lain selama perangkat ini tidak aktif SELALU mengikuti pusat; antrean
-      // lama untuk baris itu dibuang agar tidak menimpa data kasir aktif.
-      // Transaksi baru yang dibuat saat offline (belum ada di pusat) tetap dikirim.
-      let cancelledFast = false;
-      let retryFast: ReturnType<typeof setTimeout> | null = null;
-      void (async () => {
-        const since = localStorage.getItem(SINCE_KEY) ?? EPOCH;
-        const { data, error: catchError } = await fetchAllStoreData(storeId, since);
-        if (cancelledFast) return;
-        if (catchError) {
-          if (!navigator.onLine) {
-            bootstrappedRef.current = true;
-            setReadyStoreId(storeId);
-            return;
-          }
-          retryFast = setTimeout(() => {
-            if (!cancelledFast) setBootAttempt((n) => n + 1);
-          }, 5000);
-          return;
-        }
-        const remote = (data ?? []) as {
-          kind: string;
-          entity_id: string;
-          payload: Record<string, unknown>;
-          deleted: boolean;
-          updated_at: string;
-        }[];
-        if (remote.length) {
-          const records: SyncRecord[] = remote.map((row) => ({
-            kind: row.kind,
-            entity_id: row.entity_id,
-            payload: row.payload ?? {},
-            deleted: row.deleted,
-          }));
-          for (const r of records) delete outboxRef.current[recordKey(r.kind, r.entity_id)];
-          writeJson(OUTBOX_KEY, outboxRef.current);
-          setPending(Object.keys(outboxRef.current).length);
-          applyRemote((prev) => applyRecords(prev, records));
-          noteShadow(records);
-          const newest = remote.at(-1)?.updated_at;
-          if (newest) localStorage.setItem(SINCE_KEY, newest);
-        }
-        bootstrappedRef.current = true;
-        setError(null);
-        setReadyStoreId(storeId);
-      })();
-      return () => {
-        cancelledFast = true;
-        if (retryFast) clearTimeout(retryFast);
-      };
+    if (!navigator.onLine && stateRef.current.storeId === storeId && storageLoaded) {
+      setReadyStoreId(storeId);
+      return;
     }
     if (hasSyncHistory && !storageLoaded) {
       localStorage.removeItem(SHADOW_KEY);
