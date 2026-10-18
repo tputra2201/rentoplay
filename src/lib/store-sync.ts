@@ -407,7 +407,9 @@ export function useStoreSync(options: {
     let cancelled = false;
     let retry: ReturnType<typeof setTimeout> | null = null;
     void (async () => {
-      const { data, error: bootstrapError } = await fetchAllStoreData(storeId, null);
+      // Baseline lengkap mengganti seluruh daftar lokal, jadi baris terhapus
+      // tidak diperlukan dan tidak diunduh (bisa puluhan ribu baris kosong).
+      const { data, error: bootstrapError } = await fetchAllStoreData(storeId, null, true);
       if (cancelled) return;
       if (bootstrapError) {
         setError(bootstrapError.message);
