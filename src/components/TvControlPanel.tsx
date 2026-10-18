@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { Power, PowerOff, Unlock, Home, RefreshCw, Image, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Check, Undo2, RotateCcw } from "lucide-react";
+import { Power, PowerOff, Unlock, Home, RefreshCw, Image } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStoreInfo } from "@/lib/store-info";
 import { controlTv, tvControlSettings, saveTvControlSettings, DEFAULT_TV_CONTROL, type TvControlResult } from "@/lib/tv-control";
@@ -32,24 +31,10 @@ export function TvControlPanel({ stationId, setup = false }: { stationId: string
   };
   const disabled = !ready || busy;
   return <div className="space-y-3 border-t border-border pt-3 text-sm">
-    <h3 className="font-semibold">Kontrol TV</h3>
     {setup && <div className="grid gap-3 sm:grid-cols-2">
       <div className="space-y-1"><Label htmlFor={`mac-${stationId}`}>MAC TV</Label><Input id={`mac-${stationId}`} value={settings.mac} placeholder="1c:d1:d7:b8:30:68" onChange={e => update({ mac: e.target.value })} /></div>
       <div className="space-y-1"><Label htmlFor={`token-${stationId}`}>Kode kontrol dari TV (6 angka)</Label><Input id={`token-${stationId}`} inputMode="numeric" maxLength={6} autoComplete="off" placeholder="123456" value={settings.token} onChange={e => update({ token: e.target.value.replace(/[^0-9]/g, "") })} /></div>
-      <div className="space-y-2 sm:col-span-2">
-        <Label>Pola Remote TV (4–6 tombol)</Label>
-        <div aria-label="Pola remote tersimpan" className="flex min-h-9 items-center gap-2 font-mono text-lg">
-          {settings.unlockPattern ? settings.unlockPattern.split("").map((key, i) => <span key={i}>{({ U: "↑", D: "↓", L: "←", R: "→", C: "OK" } as Record<string, string>)[key]}</span>) : <span className="text-sm text-muted-foreground">Belum diatur</span>}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {[{ key: "U", label: "Atas", icon: ArrowUp }, { key: "D", label: "Bawah", icon: ArrowDown }, { key: "L", label: "Kiri", icon: ArrowLeft }, { key: "R", label: "Kanan", icon: ArrowRight }, { key: "C", label: "OK", icon: Check }].map(({ key, label, icon: Icon }) => <Button key={key} type="button" size="icon" variant="outline" title={label} aria-label={`Pola ${label}`} disabled={settings.unlockPattern.length >= 6} onClick={() => update({ unlockPattern: settings.unlockPattern + key })}><Icon className="size-4" /></Button>)}
-          <Button type="button" size="icon" variant="outline" title="Hapus tombol terakhir" aria-label="Hapus tombol terakhir" disabled={!settings.unlockPattern} onClick={() => update({ unlockPattern: settings.unlockPattern.slice(0, -1) })}><Undo2 className="size-4" /></Button>
-          <Button type="button" size="icon" variant="outline" title="Kosongkan pola" aria-label="Kosongkan pola" disabled={!settings.unlockPattern} onClick={() => update({ unlockPattern: "" })}><RotateCcw className="size-4" /></Button>
-        </div>
-      </div>
-      <div className="space-y-1"><Label htmlFor={`welcome-title-${stationId}`}>Judul sambutan</Label><Input id={`welcome-title-${stationId}`} value={settings.welcomeTitle} onChange={e => update({ welcomeTitle: e.target.value })} /></div>
-      <div className="space-y-1 sm:col-span-2"><Label htmlFor={`welcome-message-${stationId}`}>Ucapan sambutan</Label><Input id={`welcome-message-${stationId}`} value={settings.welcomeMessage} onChange={e => update({ welcomeMessage: e.target.value })} /></div>
-      <div className="flex items-center justify-between gap-3 sm:col-span-2"><Label htmlFor={`splash-enabled-${stationId}`}>Splash saat TV dinyalakan</Label><Switch id={`splash-enabled-${stationId}`} checked={settings.splashOnWake} onCheckedChange={v => update({ splashOnWake: v })} /></div>
+      <p className="text-xs text-muted-foreground sm:col-span-2">Pola remote, judul, dan ucapan sambutan diatur satu kali untuk semua TV di bagian Pengaturan Global TV.</p>
       <Button className="sm:col-span-2" disabled={disabled} onClick={() => run("configure", { logo: store?.logo_url ?? "", store: store?.store_name ?? "RenToPlay" })}>Kirim Pengaturan ke TV</Button>
     </div>}
     <div className="flex flex-wrap gap-2">
