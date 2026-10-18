@@ -568,8 +568,10 @@ export function useStoreSync(options: {
           _store_id: storeId,
           _records: rows as never,
         });
-        if (pushError) throw pushError;
-        const response = result as unknown as { accepted: boolean; records: SyncRecord[] };
+        if (pushError && pushError.code !== 'P0001') throw pushError;
+        const response = pushError
+          ? { accepted: false, records: [] }
+          : result as unknown as { accepted: boolean; records: SyncRecord[] };
         if (!response.accepted) {
           preserveConflicts(Array.from(sentByKey.values()));
           // The entire send is atomic: no orphan receipt/VOID on a rejected station.
