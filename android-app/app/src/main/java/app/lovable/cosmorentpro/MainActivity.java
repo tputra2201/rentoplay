@@ -51,6 +51,7 @@ public final class MainActivity extends Activity {
         });
         webView.addJavascriptInterface(new PrintBridge(this, webView), "BillingAndroid");
         webView.addJavascriptInterface(new TvBridge(this), "RenToPlayTV");
+        webView.addJavascriptInterface(new TvControlBridge(webView), "RenToPlayControl");
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {

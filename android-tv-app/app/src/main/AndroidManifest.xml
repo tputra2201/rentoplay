@@ -26,5 +26,9 @@
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /></intent-filter>
         </receiver>
+        <service android:name=".TvPowerService" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE" android:exported="true" android:label="RenToPlay TV — Standby">
+            <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/tv_power_accessibility" />
+        </service>
     </application>
 </manifest>

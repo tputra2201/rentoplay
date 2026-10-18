@@ -1,0 +1,3 @@
+<resources>
+    <string name="power_service_description">Mengizinkan perintah standby dari kasir RenToPlay. Tidak membaca isi layar.</string>
+</resources>
