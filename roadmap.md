@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] Perkuat sinkronisasi multi-perangkat: hanya aksi lokal masuk antrean, pusat didahulukan saat buka/sambung kembali, tolak revisi basi di pusat, VOID tidak hidup kembali; uji konflik dan offline tanpa menyentuh transaksi store berjalan.
+- [x] Perkuat sinkronisasi multi-perangkat: antrean aksi eksplisit per tab, baseline pusat sebelum layar dibuka, RPC atomik menolak base basi/kiriman ganda, sesi retired dan shift close dilindungi, konflik disalin untuk pemeriksaan. Pengujian aturan lokal dan RPC autentikasi lulus; baris uji sementara dibersihkan.
+- [ ] Publikasikan pembaruan web dan buka ulang pada semua perangkat — menunggu perintah publikasi pengguna; pengaman pusat sudah aktif dan menolak pengiriman versi lama. Uji operasional beberapa kasir fisik bersamaan masih menunggu perangkat pengguna.
 
 - [x] Temuan monitoring: logo alarm dipisahkan dari PendingIntent dan dipulihkan receiver, DP tetap di PAY-IN periode penerimaan; jarak cetak sudah benar dua baris kosong (temuan stale). 19 tes Bun dan uji JVM bridge/receiver dengan logo 1,8 juta karakter lulus; build OK. ZIP Kasir 1.4.1 siap di Files; APK perlu dibuild/install dan uji TV/printer fisik menunggu perangkat pengguna.
 

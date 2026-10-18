@@ -43,3 +43,10 @@ test('remote deletion cannot be resurrected from queued local data', () => {
   expect(reconcileIntents(outbox, [{ kind: 'menu', entity_id: 'coffee', payload: {}, deleted: true }])).toBe(1);
   expect(outbox).toEqual({});
 });
+test('rejected offline work is preserved for review before removal from sending queue', () => {
+  const outbox = { 'menu:coffee': row('menu', 'coffee', { price: 12000 }, { price: 10000 }) };
+  const saved = [];
+  reconcileIntents(outbox, [{ kind: 'menu', entity_id: 'coffee', payload: { price: 15000 }, deleted: false }], rows => saved.push(...rows));
+  expect(saved[0].payload.price).toBe(12000);
+  expect(outbox).toEqual({});
+});
