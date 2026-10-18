@@ -82,34 +82,57 @@ type RemoteRow = {
  * harus mengunduh puluhan ribu baris kosong dulu sebelum layar terisi,
  * sehingga aplikasi terasa lambat dan sempat menampilkan data lama.
  */
+// Jenis data bervolume besar diunduh bersamaan di jalurnya sendiri, sehingga
+// baseline tidak menunggu belasan halaman satu per satu.
+const HEAVY_KINDS = ["history", "log_entry", "cash_entry"] as const;
+
 async function fetchAllStoreData(
   storeId: string,
   since: string | null,
   skipDeleted = false,
 ): Promise<{ data: RemoteRow[]; error: { message: string } | null }> {
   const PAGE = 1000;
-  const all: RemoteRow[] = [];
-  for (let from = 0; ; from += PAGE) {
+  const fetchLane = async (
+    lane: (q: ReturnType<typeof baseQuery>) => ReturnType<typeof baseQuery>,
+  ) => {
+    const all: RemoteRow[] = [];
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await lane(baseQuery())
+        .order("updated_at", { ascending: true })
+        .order("kind", { ascending: true })
+        .order("entity_id", { ascending: true })
+        .range(from, from + PAGE - 1);
+      if (error) return { data: all, error };
+      const rows = (data ?? []) as RemoteRow[];
+      all.push(...rows);
+      if (rows.length < PAGE) break;
+    }
+    return { data: all, error: null };
+  };
+  function baseQuery() {
     let q = supabase
       .from("store_data")
       .select("kind, entity_id, payload, deleted, updated_at")
       .eq("store_id", storeId);
     if (since) q = q.gte("updated_at", since);
-    // Hanya unduhan pertama (perangkat kosong) yang boleh melewati baris
-    // terhapus. Audit penuh WAJIB menerimanya agar penghapusan yang
-    // terlewat tetap dibersihkan dan kursor tidak melompatinya.
+    // Baseline penuh mengganti seluruh daftar lokal, jadi baris terhapus
+    // (isinya kosong) tidak perlu diunduh.
     else if (skipDeleted) q = q.eq("deleted", false);
-
-    const { data, error } = await q
-      .order("updated_at", { ascending: true })
-      .order("kind", { ascending: true })
-      .order("entity_id", { ascending: true })
-      .range(from, from + PAGE - 1);
-    if (error) return { data: all, error };
-    const rows = (data ?? []) as RemoteRow[];
-    all.push(...rows);
-    if (rows.length < PAGE) break;
+    return q;
   }
+
+  // Tarikan inkremental biasanya kecil: satu jalur cukup.
+  if (since) return fetchLane((q) => q);
+
+  const lanes = await Promise.all([
+    ...HEAVY_KINDS.map((kind) => fetchLane((q) => q.eq("kind", kind))),
+    fetchLane((q) => q.not("kind", "in", `(${HEAVY_KINDS.join(",")})`)),
+  ]);
+  const failed = lanes.find((lane) => lane.error);
+  if (failed) return failed;
+  const all = lanes.flatMap((lane) => lane.data);
+  // Urutan waktu dipertahankan agar baris terakhir tetap menjadi kursor.
+  all.sort((a, b) => (a.updated_at < b.updated_at ? -1 : a.updated_at > b.updated_at ? 1 : 0));
   return { data: all, error: null };
 }
 
