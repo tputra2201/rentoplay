@@ -82,34 +82,57 @@ type RemoteRow = {
  * harus mengunduh puluhan ribu baris kosong dulu sebelum layar terisi,
  * sehingga aplikasi terasa lambat dan sempat menampilkan data lama.
  */
+// Jenis data bervolume besar diunduh bersamaan di jalurnya sendiri, sehingga
+// baseline tidak menunggu belasan halaman satu per satu.
+const HEAVY_KINDS = ["history", "log_entry", "cash_entry"] as const;
+
 async function fetchAllStoreData(
   storeId: string,
   since: string | null,
   skipDeleted = false,
 ): Promise<{ data: RemoteRow[]; error: { message: string } | null }> {
   const PAGE = 1000;
-  const all: RemoteRow[] = [];
-  for (let from = 0; ; from += PAGE) {
+  const fetchLane = async (
+    lane: (q: ReturnType<typeof baseQuery>) => ReturnType<typeof baseQuery>,
+  ) => {
+    const all: RemoteRow[] = [];
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await lane(baseQuery())
+        .order("updated_at", { ascending: true })
+        .order("kind", { ascending: true })
+        .order("entity_id", { ascending: true })
+        .range(from, from + PAGE - 1);
+      if (error) return { data: all, error };
+      const rows = (data ?? []) as RemoteRow[];
+      all.push(...rows);
+      if (rows.length < PAGE) break;
+    }
+    return { data: all, error: null };
+  };
+  function baseQuery() {
     let q = supabase
       .from("store_data")
       .select("kind, entity_id, payload, deleted, updated_at")
       .eq("store_id", storeId);
     if (since) q = q.gte("updated_at", since);
-    // Hanya unduhan pertama (perangkat kosong) yang boleh melewati baris
-    // terhapus. Audit penuh WAJIB menerimanya agar penghapusan yang
-    // terlewat tetap dibersihkan dan kursor tidak melompatinya.
+    // Baseline penuh mengganti seluruh daftar lokal, jadi baris terhapus
+    // (isinya kosong) tidak perlu diunduh.
     else if (skipDeleted) q = q.eq("deleted", false);
-
-    const { data, error } = await q
-      .order("updated_at", { ascending: true })
-      .order("kind", { ascending: true })
-      .order("entity_id", { ascending: true })
-      .range(from, from + PAGE - 1);
-    if (error) return { data: all, error };
-    const rows = (data ?? []) as RemoteRow[];
-    all.push(...rows);
-    if (rows.length < PAGE) break;
+    return q;
   }
+
+  // Tarikan inkremental biasanya kecil: satu jalur cukup.
+  if (since) return fetchLane((q) => q);
+
+  const lanes = await Promise.all([
+    ...HEAVY_KINDS.map((kind) => fetchLane((q) => q.eq("kind", kind))),
+    fetchLane((q) => q.not("kind", "in", `(${HEAVY_KINDS.join(",")})`)),
+  ]);
+  const failed = lanes.find((lane) => lane.error);
+  if (failed) return failed;
+  const all = lanes.flatMap((lane) => lane.data);
+  // Urutan waktu dipertahankan agar baris terakhir tetap menjadi kursor.
+  all.sort((a, b) => (a.updated_at < b.updated_at ? -1 : a.updated_at > b.updated_at ? 1 : 0));
   return { data: all, error: null };
 }
 
@@ -407,7 +430,9 @@ export function useStoreSync(options: {
     let cancelled = false;
     let retry: ReturnType<typeof setTimeout> | null = null;
     void (async () => {
-      const { data, error: bootstrapError } = await fetchAllStoreData(storeId, null);
+      // Baseline lengkap mengganti seluruh daftar lokal, jadi baris terhapus
+      // tidak diperlukan dan tidak diunduh (bisa puluhan ribu baris kosong).
+      const { data, error: bootstrapError } = await fetchAllStoreData(storeId, null, true);
       if (cancelled) return;
       if (bootstrapError) {
         setError(bootstrapError.message);
@@ -526,7 +551,9 @@ export function useStoreSync(options: {
       // perangkat walau ada baris yang pernah terlewat.
       const auditNow = Date.now() - lastAuditRef.current >= AUDIT_EVERY_MS;
       const since = auditNow ? null : (localStorage.getItem(SINCE_KEY) ?? EPOCH);
-      const { data, error: pullError } = await fetchAllStoreData(storeId, since);
+      // Audit penuh hanya mengambil baris aktif lalu MENGGANTI daftar lokal,
+      // sehingga baris terhapus yang menumpuk tidak perlu diunduh ulang.
+      const { data, error: pullError } = await fetchAllStoreData(storeId, since, auditNow);
       if (pullError) throw new Error(pullError.message);
       if (auditNow) lastAuditRef.current = Date.now();
       // Include actions committed while the network read was in flight before
@@ -545,7 +572,12 @@ export function useStoreSync(options: {
         const conflicts = reconcileIntents(outboxRef.current, records, preserveConflicts);
         if (conflicts) {
           toast.warning('Perubahan antarperangkat bertabrakan. Data pusat dipertahankan; periksa lalu ulangi tindakan Anda.', { duration: 15000 });
-          const full = await fetchAllStoreData(storeId, null);
+        }
+        if (auditNow) {
+          applyRemote(prev => applyRecords(applyRecords(clearSyncedLists(prev), records), Object.values(outboxRef.current)));
+          shadowRef.current = {};
+        } else if (conflicts) {
+          const full = await fetchAllStoreData(storeId, null, true);
           if (full.error) throw new Error(full.error.message);
           applyRemote(prev => applyRecords(applyRecords(clearSyncedLists(prev), full.data), Object.values(outboxRef.current)));
         } else {
@@ -555,7 +587,8 @@ export function useStoreSync(options: {
         writeJson(outboxKeyRef.current, outboxRef.current);
         setPending(Object.keys(outboxRef.current).length);
         const newest = remote.at(-1)?.updated_at;
-        if (newest) localStorage.setItem(SINCE_KEY, newest);
+        const cursor = localStorage.getItem(SINCE_KEY);
+        if (newest && (!cursor || newest > cursor)) localStorage.setItem(SINCE_KEY, newest);
       }
 
       // 2. Kirim perubahan lokal yang tersisa.
@@ -584,7 +617,7 @@ export function useStoreSync(options: {
             const current = outbox[key];
             if (current?.transaction === sentRecord.transaction) delete outbox[key];
           }
-          const full = await fetchAllStoreData(storeId, null);
+          const full = await fetchAllStoreData(storeId, null, true);
           if (full.error) throw new Error(full.error.message);
           applyRemote(prev => applyRecords(applyRecords(clearSyncedLists(prev), full.data), Object.values(outbox)));
           toast.warning('Pusat menolak kiriman yang sudah tertinggal. Data terbaru dimuat; periksa dan ulangi tindakan yang diperlukan.', { duration: 15000 });
