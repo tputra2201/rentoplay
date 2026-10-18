@@ -35,7 +35,7 @@ import {
 } from "./report-range";
 import { ALARM_SOUNDS, type AlarmSound } from "./alarm";
 import { SETTINGS_KEYS } from "./sync-records";
-import { captureIntent, type IntentQueue } from "./sync-intent";
+import { captureIntent, saveIntentJournal, loadIntentJournal, type IntentQueue } from "./sync-intent";
 
 /**
  * Waktu batas penutupan otomatis satu hari usaha: tepat pada jam tutup.
@@ -2541,17 +2541,22 @@ billingGlobal.__rentoplayBillingContext = BillingContext;
 
 
 export function BillingProvider({ children }: { children: ReactNode }) {
-  const [state, setRawState] = useState<State>(defaultState);
-  const intentsRef = useRef<IntentQueue['current']>([]);
-  const setState = useCallback((action: State | ((prev: State) => State)) => {
-    setRawState(prev => {
-      const next = typeof action === 'function' ? action(prev) : action;
-      intentsRef.current.push(...captureIntent(prev, next));
-      return next;
-    });
-  }, []);
+  const [state, setReactState] = useState<State>(defaultState);
   const stateRef = useRef<State>(state);
-  stateRef.current = state;
+  const intentsRef = useRef<IntentQueue['current']>([]);
+  const setRawState = useCallback((action: State | ((prev: State) => State)) => {
+    const next = typeof action === 'function' ? action(stateRef.current) : action;
+    stateRef.current = next;
+    setReactState(next);
+  }, []);
+  const setState = useCallback((action: State | ((prev: State) => State)) => {
+    const prev = stateRef.current;
+    const next = typeof action === 'function' ? action(prev) : action;
+    intentsRef.current.push(...captureIntent(prev, next));
+    saveIntentJournal(intentsRef.current);
+    setRawState(next);
+  }, [setRawState]);
+  useEffect(() => { intentsRef.current = loadIntentJournal(); }, []);
   const [now, setNow] = useState(() => Date.now());
   const [hydrated, setHydrated] = useState(false);
   // True hanya bila data lokal memang terbaca dari perangkat. Kalau false,

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { BillingSnapshot } from "./billing-store";
-import { enqueueIntent, reconcileIntents, canonical, type Intent, type IntentQueue } from "./sync-intent";
+import { enqueueIntent, reconcileIntents, canonical, intentStorageKey, saveIntentJournal, preserveConflicts, type Intent, type IntentQueue } from "./sync-intent";
 import { toast } from "sonner";
 import {
   applyRecords,
@@ -49,7 +49,7 @@ async function recoverSession(): Promise<boolean> {
 }
 
 
-const OUTBOX_KEY = "billing-sync-outbox-v1";
+const LEGACY_OUTBOX_KEY = "billing-sync-outbox-v1";
 const SHADOW_KEY = "billing-sync-shadow-v1";
 const SINCE_KEY = "billing-sync-since-v1";
 const STORE_KEY = "billing-sync-store-v1";
@@ -195,6 +195,7 @@ export function useStoreSync(options: {
   const [bootAttempt, setBootAttempt] = useState(0);
 
 
+  const outboxKeyRef = useRef<string>("");
   const shadowRef = useRef<Shadow>({});
   const outboxRef = useRef<Outbox>({});
   const busyRef = useRef(false);
@@ -222,14 +223,16 @@ export function useStoreSync(options: {
   // Muat antrean & bayangan dari perangkat.
   useEffect(() => {
     shadowRef.current = readJson<Shadow>(SHADOW_KEY, {});
-    const saved = readJson<Outbox>(OUTBOX_KEY, {});
+    outboxKeyRef.current = intentStorageKey('outbox');
+    const saved = { ...readJson<Outbox>(LEGACY_OUTBOX_KEY, {}), ...readJson<Outbox>(outboxKeyRef.current, {}) };
     const legacy = Object.fromEntries(Object.entries(saved).filter(([, row]) => !row.transaction || !('base' in row)));
     if (Object.keys(legacy).length) {
       writeJson('billing-sync-quarantine-v1', legacy);
       toast.warning('Antrean versi lama ditahan agar data basi tidak terkirim. Periksa transaksi offline yang belum tersimpan.', { duration: 15000 });
     }
     outboxRef.current = Object.fromEntries(Object.entries(saved).filter(([, row]) => row.transaction && 'base' in row));
-    writeJson(OUTBOX_KEY, outboxRef.current);
+    writeJson(outboxKeyRef.current, outboxRef.current);
+    localStorage.removeItem(LEGACY_OUTBOX_KEY);
     setPending(Object.keys(outboxRef.current).length);
     setOnline(typeof navigator === "undefined" ? true : navigator.onLine);
     loadedRef.current = true;
@@ -306,7 +309,7 @@ export function useStoreSync(options: {
           // Data lokal milik store lain (atau data bawaan yang belum bertanda
           // store): buang jejak sinkronisasi lama supaya tidak ikut terkirim.
           localStorage.removeItem(SHADOW_KEY);
-          localStorage.removeItem(OUTBOX_KEY);
+          localStorage.removeItem(outboxKeyRef.current);
           localStorage.removeItem(SINCE_KEY);
           // Tandai bahwa data lokal baru saja dikosongkan, jadi isi pusat aman
           // dipakai sebagai satu-satunya sumber saat pengambilan pertama.
@@ -349,7 +352,8 @@ export function useStoreSync(options: {
     for (const transaction of new Set(queued.map(i => i.transaction))) {
       enqueueIntent(outboxRef.current, queued.filter(i => i.transaction === transaction));
     }
-    writeJson(OUTBOX_KEY, outboxRef.current);
+    writeJson(outboxKeyRef.current, outboxRef.current);
+    saveIntentJournal(intents.current);
     setPending(Object.keys(outboxRef.current).length);
   }, [intents]);
 
@@ -384,7 +388,7 @@ export function useStoreSync(options: {
     }
     if (hasSyncHistory && !storageLoaded) {
       localStorage.removeItem(SHADOW_KEY);
-      localStorage.removeItem(OUTBOX_KEY);
+      localStorage.removeItem(outboxKeyRef.current);
       localStorage.removeItem(SINCE_KEY);
       localStorage.setItem(FRESH_KEY, storeId);
       shadowRef.current = {};
@@ -417,7 +421,7 @@ export function useStoreSync(options: {
         updated_at: string;
       }[];
       const records: SyncRecord[] = remote.map(row => ({ ...row, payload: row.payload ?? {} }));
-      if (reconcileIntents(outboxRef.current, records)) {
+      if (reconcileIntents(outboxRef.current, records, preserveConflicts)) {
         toast.warning('Perubahan bertabrakan dengan data pusat. Data terbaru dimuat; periksa lalu ulangi tindakan yang masih diperlukan.', { duration: 15000 });
       }
       // Includes the empty-server case: cached entities never become new writes.
@@ -425,7 +429,7 @@ export function useStoreSync(options: {
       applyRemote(prev => applyRecords(applyRecords(clearSyncedLists(prev), records), pendingRecords));
       shadowRef.current = {};
       noteShadow(records);
-      writeJson(OUTBOX_KEY, outboxRef.current);
+      writeJson(outboxKeyRef.current, outboxRef.current);
       setPending(pendingRecords.length);
       const newest = remote.at(-1)?.updated_at;
       if (newest) localStorage.setItem(SINCE_KEY, newest);
@@ -482,7 +486,7 @@ export function useStoreSync(options: {
       if (!currentStoreId) throw new Error("Akun belum terhubung ke store.");
       if (currentStoreId !== storeId) {
         localStorage.removeItem(SHADOW_KEY);
-        localStorage.removeItem(OUTBOX_KEY);
+        localStorage.removeItem(outboxKeyRef.current);
         localStorage.removeItem(SINCE_KEY);
         localStorage.removeItem(BASELINE_KEY);
         localStorage.setItem(STORE_KEY, currentStoreId);
@@ -527,7 +531,7 @@ export function useStoreSync(options: {
       }[];
       if (remote.length) {
         const records: SyncRecord[] = remote.map(row => ({ ...row, payload: row.payload ?? {} }));
-        const conflicts = reconcileIntents(outboxRef.current, records);
+        const conflicts = reconcileIntents(outboxRef.current, records, preserveConflicts);
         if (conflicts) {
           toast.warning('Perubahan antarperangkat bertabrakan. Data pusat dipertahankan; periksa lalu ulangi tindakan Anda.', { duration: 15000 });
           const full = await fetchAllStoreData(storeId, null);
@@ -537,7 +541,7 @@ export function useStoreSync(options: {
           applyRemote(prev => applyRecords(applyRecords(prev, records), Object.values(outboxRef.current)));
         }
         noteShadow(records);
-        writeJson(OUTBOX_KEY, outboxRef.current);
+        writeJson(outboxKeyRef.current, outboxRef.current);
         setPending(Object.keys(outboxRef.current).length);
         const newest = remote.at(-1)?.updated_at;
         if (newest) localStorage.setItem(SINCE_KEY, newest);
@@ -561,6 +565,7 @@ export function useStoreSync(options: {
         if (pushError) throw pushError;
         const response = result as unknown as { accepted: boolean; records: SyncRecord[] };
         if (!response.accepted) {
+          preserveConflicts(Array.from(sentByKey.values()));
           // The entire send is atomic: no orphan receipt/VOID on a rejected station.
           for (const [key, sentRecord] of sentByKey) {
             const current = outbox[key];
@@ -578,7 +583,7 @@ export function useStoreSync(options: {
           }
           noteShadow(response.records);
         }
-        writeJson(OUTBOX_KEY, outbox);
+        writeJson(outboxKeyRef.current, outbox);
         setPending(Object.keys(outbox).length);
         // Never advance the pull cursor from push timestamps: another device's
         // intervening update has not yet been read and would otherwise be skipped.

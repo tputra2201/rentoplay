@@ -38,13 +38,38 @@ export function enqueueIntent(outbox: Record<string, Intent>, intents: Intent[])
   }
 }
 
-export function reconcileIntents(outbox: Record<string, Intent>, remote: SyncRecord[]) {
+export function reconcileIntents(outbox: Record<string, Intent>, remote: SyncRecord[], preserve?: (rows: Intent[]) => void) {
   const conflicts = new Set<string>();
   for (const row of remote) {
     const pending = outbox[recordKey(row.kind, row.entity_id)];
     if (pending && (row.deleted || canonical(row.payload) !== canonical(pending.base)) &&
         !(row.deleted === pending.deleted && canonical(row.payload) === canonical(pending.payload))) conflicts.add(pending.transaction);
   }
+  preserve?.(Object.values(outbox).filter(pending => conflicts.has(pending.transaction)));
   for (const [key, pending] of Object.entries(outbox)) if (conflicts.has(pending.transaction)) delete outbox[key];
   return conflicts.size;
+}
+// One durable queue per browser tab; independent tabs cannot replace each other's
+// offline work. sessionStorage preserves identity across reloads of that tab.
+export function intentStorageKey(suffix: string) {
+  if (typeof window === 'undefined') return `billing-intents-${suffix}`;
+  let id = sessionStorage.getItem('billing-sync-tab');
+  if (!id) { id = crypto.randomUUID(); sessionStorage.setItem('billing-sync-tab', id); }
+  return `billing-intents-${id}-${suffix}`;
+}
+export function saveIntentJournal(rows: Intent[]) {
+  try { localStorage.setItem(intentStorageKey('journal'), JSON.stringify(rows)); }
+  catch { /* caller retains the in-memory queue */ }
+}
+export function loadIntentJournal(): Intent[] {
+  try { return JSON.parse(localStorage.getItem(intentStorageKey('journal')) ?? '[]'); }
+  catch { return []; }
+}
+export function preserveConflicts(rows: Intent[]) {
+  if (!rows.length) return;
+  try {
+    const key = intentStorageKey('conflicts');
+    const previous = JSON.parse(localStorage.getItem(key) ?? '[]');
+    localStorage.setItem(key, JSON.stringify([...previous, { at: Date.now(), records: rows }]));
+  } catch { /* never send rejected rows automatically */ }
 }
