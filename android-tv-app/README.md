@@ -2,7 +2,7 @@
 
 Dipasang di setiap TV. Menampilkan kartu notifikasi di atas layar PS (HDMI).
 
-Versi 1.4.0 mengganti PIN remote menjadi pola 4–6 tombol arah/OK; volume, Home/HDMI, standby opsional dan layar waktu habis hitam pekat tetap tersedia. Release Splash tidak memulai billing/timer.
+Versi 1.5.0 menambah perintah bangun layar dari dalam jaringan (dipakai saat Wake-on-LAN diblokir router Wi-Fi), pengaturan TV global sekali isi untuk semua unit, dan daftar station accordion di kasir. Pola remote 4–6 tombol arah/OK, volume, Home/HDMI, standby opsional dan layar waktu habis hitam pekat tetap tersedia. Release Splash tidak memulai billing/timer.
 Build ulang dan pasang APK pembaruan di setiap TV. Overlay hanya menutupi gambar, tidak memutus HDMI atau mengunci konsol.
 Untuk logo tajam/transparan, unggah ulang PNG transparan beresolusi tinggi melalui Data Store; tersedia pilihan hapus latar polos.
 
@@ -16,11 +16,11 @@ Disarankan IP TV dibuat tetap (DHCP reservation di router).
 
 ## Pengaturan kontrol TV
 
-1. Pasang pembaruan Companion 1.4.0 dan Kasir 1.6.0 tanpa uninstall, dengan kunci penandatanganan yang sama.
+1. Pasang pembaruan Companion 1.5.0 dan Kasir 1.6.0 tanpa uninstall, dengan kunci penandatanganan yang sama.
 2. Buka Companion, salin IP dan kode kontrol ke Setup → Station di APK kasir. Kode ini rahasia; jaringan lokal harus tepercaya (HTTP tidak terenkripsi).
 3. Isi MAC TV, buat pola 4–6 tombol arah/OK di Setup Station, isi judul dan ucapan sambutan. Aktifkan Splash saat TV dinyalakan, lalu **Kirim Pengaturan ke TV**. Logo dan nama store ikut disimpan di TV. Mengubah pengaturan kasir saja belum memperbarui TV. Tidak ada pola bawaan; PIN angka lama tetap berlaku sampai pengaturan baru dikirim.
 4. Untuk standby, aktifkan **RenToPlay TV — Standby** di Aksesibilitas TV. Layanan tidak membaca isi layar; memakai aksi kunci layar Android, yang hasilnya bergantung model TV.
-5. Nyalakan memakai Wake-on-LAN (broadcast subnet, broadcast umum dan IP TV, tiga pengiriman UDP 7/9); Mode Standby Berjaringan/Quick Start dan dukungan WOL diperlukan. MAC harus milik koneksi TV yang aktif (Wi-Fi/Ethernet). Balasan hanya mengonfirmasi pengiriman paket, bukan bahwa TV telah menyala. Cast wake tidak ditambahkan karena tidak ada protokol bangun generik yang terverifikasi untuk model ini.
+5. Nyalakan memakai Wake-on-LAN (broadcast subnet, broadcast umum dan IP TV, tiga pengiriman UDP 7/9); Mode Standby Berjaringan/Quick Start dan dukungan WOL diperlukan. MAC harus milik koneksi TV yang aktif (Wi-Fi/Ethernet). Balasan hanya mengonfirmasi pengiriman paket, bukan bahwa TV telah menyala. Cast wake tidak ditambahkan karena tidak ada protokol bangun generik yang terverifikasi untuk model ini. Kasir juga mengirim perintah bangun internal (`action: "wake"` ke port 8765) yang menyalakan layar dari dalam TV; ini berhasil hanya bila Wi-Fi TV masih hidup, dan splash sambutan ikut muncul jika splash aktif.
 6. Tekan pemeriksaan volume/input di panel Station. HDMI diambil dari daftar input perangkat, bukan nama/ID tebakan; pemindahan input dan Home bergantung izin/OEM TV. Tidak memakai atau mengklaim sudah melakukan pairing ADB.
 7. Uji nyala dengan remote/tombol TV, splash/logo, pola benar/salah, Release Splash, volume, standby, WOL dan setiap HDMI pada TV TCL sebelum dipakai operasional. Tekan arah/OK sekali per langkah; tahan tombol tidak dihitung berulang. Back mengosongkan masukan, bukan membuka splash.
 
