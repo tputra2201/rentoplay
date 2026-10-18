@@ -190,9 +190,11 @@ public final class OverlayService extends Service {
             if (!RemotePin.valid(pin)) { result.put("ok", false); result.put("error", "PIN harus 4–6 angka."); return result; }
             String salt = java.util.UUID.randomUUID().toString();
             boolean saved = controlPrefs(this).edit().putString("salt", salt).putString("pinHash", RemotePin.hash(pin, salt))
+                .putInt("pinLength", pin.length())
                 .putString("title", j.optString("title")).putString("message", j.optString("message"))
                 .putString("logo", j.optString("logo")).putString("store", j.optString("store"))
                 .putBoolean("enabled", j.optBoolean("enabled")).commit();
+            if (saved && !j.optBoolean("enabled")) dismissSplash();
             result.put("ok", saved); if (!saved) result.put("error", "Pengaturan TV gagal disimpan."); return result;
         }
         if (action.equals("splash")) { showWelcome(this); result.put("ok", controlPrefs(this).getBoolean("enabled", false)); if (!result.getBoolean("ok")) result.put("error", "Aktifkan dan kirim pengaturan splash terlebih dahulu."); return result; }
