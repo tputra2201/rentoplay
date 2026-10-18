@@ -1,15 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { BillingSnapshot } from "./billing-store";
+import { enqueueIntent, reconcileIntents, canonical, type Intent, type IntentQueue } from "./sync-intent";
+import { toast } from "sonner";
 import {
   applyRecords,
   clearSyncedLists,
-  flattenSnapshot,
-  isDefaultProtectedSetting,
-  isKnownKind,
-  PROTECTED_SETTINGS,
   recordKey,
-  SETTINGS_KIND,
   type SyncRecord,
 } from "./sync-records";
 
@@ -61,7 +58,7 @@ const FRESH_KEY = "billing-sync-fresh-v1";
 // pernah menyimpan cursor dari versi lama wajib mengambil baseline lengkap
 // sekali lagi; cursor lama tidak dapat menemukan baris yang dulu terlewat.
 const BASELINE_KEY = "billing-sync-baseline-v1";
-const BASELINE_VERSION = "all-pages-v1";
+const BASELINE_VERSION = "explicit-intent-v2";
 
 
 const EPOCH = "1970-01-01T00:00:00Z";
@@ -118,7 +115,7 @@ async function fetchAllStoreData(
 
 type Shadow = Record<string, string>;
 /** Baris yang menunggu dikirim, plus daftar kolom yang benar-benar diubah di perangkat ini. */
-type Pending = SyncRecord & { fields?: string[] };
+type Pending = Intent;
 type Outbox = Record<string, Pending>;
 
 function readJson<T>(key: string, fallback: T): T {
@@ -151,31 +148,6 @@ function writeJson(key: string, value: unknown) {
   }
 }
 
-function parseJson(raw: string | undefined): Record<string, unknown> | null {
-  if (!raw) return null;
-  try {
-    const value = JSON.parse(raw) as unknown;
-    return value && typeof value === "object" && !Array.isArray(value)
-      ? (value as Record<string, unknown>)
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-/** Kolom mana saja yang berubah dibanding salinan terakhir dari pusat. */
-function changedFields(
-  base: Record<string, unknown>,
-  next: Record<string, unknown>,
-): string[] {
-  const keys = new Set([...Object.keys(base), ...Object.keys(next)]);
-  const out: string[] = [];
-  for (const key of keys) {
-    if (stableStringify(base[key]) !== stableStringify(next[key])) out.push(key);
-  }
-  return out;
-}
-
 export type SyncStatus = {
   online: boolean;
   syncing: boolean;
@@ -203,6 +175,7 @@ export function useStoreSync(options: {
   storageLoaded: boolean;
   /** Kunci pengaturan yang memang diubah di perangkat ini. */
   dirtySettings: () => Set<string>;
+  intents: IntentQueue;
   applyRemote: (apply: (prev: BillingSnapshot) => BillingSnapshot) => void;
   /**
    * Mengikat data lokal ke satu store. Kalau perangkat sebelumnya memegang data
@@ -210,7 +183,7 @@ export function useStoreSync(options: {
    */
   bindStore: (storeId: string, keepLocal?: boolean) => void;
 }): SyncStatus {
-  const { state, hydrated, enabled, storageLoaded, dirtySettings, applyRemote, bindStore } =
+  const { state, hydrated, enabled, storageLoaded, dirtySettings, intents, applyRemote, bindStore } =
     options;
 
   const [online, setOnline] = useState(true);
@@ -231,7 +204,6 @@ export function useStoreSync(options: {
   const stateRef = useRef(state);
   const prevKeysRef = useRef<Set<string> | null>(null);
   // Sudahkah data lokal dicocokkan dengan salinan pusat sejak aplikasi dibuka?
-  const initialCheckedRef = useRef(false);
   const blockedUntilRef = useRef(0);
   /** Sudah pernah mengambil seluruh data store pada sesi ini. */
   const bootstrappedRef = useRef(false);
@@ -252,7 +224,14 @@ export function useStoreSync(options: {
   // Muat antrean & bayangan dari perangkat.
   useEffect(() => {
     shadowRef.current = readJson<Shadow>(SHADOW_KEY, {});
-    outboxRef.current = readJson<Outbox>(OUTBOX_KEY, {});
+    const saved = readJson<Outbox>(OUTBOX_KEY, {});
+    const legacy = Object.fromEntries(Object.entries(saved).filter(([, row]) => !row.transaction || !('base' in row)));
+    if (Object.keys(legacy).length) {
+      writeJson('billing-sync-quarantine-v1', legacy);
+      toast.warning('Antrean versi lama ditahan agar data basi tidak terkirim. Periksa transaksi offline yang belum tersimpan.', { duration: 15000 });
+    }
+    outboxRef.current = Object.fromEntries(Object.entries(saved).filter(([, row]) => row.transaction && 'base' in row));
+    writeJson(OUTBOX_KEY, outboxRef.current);
     setPending(Object.keys(outboxRef.current).length);
     setOnline(typeof navigator === "undefined" ? true : navigator.onLine);
     loadedRef.current = true;
@@ -366,83 +345,16 @@ export function useStoreSync(options: {
     // Kunci utama: hanya data yang memang bertanda store ini yang boleh masuk
     // antrean kirim. Ini yang mencegah data store lain berpindah.
     if (snapshot.storeId !== activeStoreId) return;
-    const current = flattenSnapshot(snapshot);
-    const shadow = shadowRef.current;
-    const outbox = outboxRef.current;
-    let changed = false;
-
-    // Pemeriksaan pertama setelah aplikasi dibuka: perubahan asli selalu sudah
-    // masuk antrean saat dibuat. Baris yang berbeda dari salinan pusat tetapi
-    // TIDAK ada di antrean berarti data lokal basi (mis. penyimpanan iPhone
-    // gagal menulis data terbaru). Jangan kirim — kembalikan ke salinan pusat.
-    if (!initialCheckedRef.current) {
-      initialCheckedRef.current = true;
-      const restore: SyncRecord[] = [];
-      for (const [key, record] of current) {
-        const known = shadow[key];
-        if (known === undefined || outbox[key]) continue;
-        if (known === stableStringify(record.payload)) continue;
-        const payload = parseJson(known);
-        if (payload) restore.push({ ...record, payload, deleted: false });
-      }
-      prevKeysRef.current = new Set(current.keys());
-      if (restore.length) {
-        applyRemote((prev) => applyRecords(prev, restore));
-        return;
-      }
+    const queued = intents.current.splice(0);
+    if (!queued.length) return;
+    // Only changed entities from an explicit local mutation can be published.
+    for (const transaction of new Set(queued.map(i => i.transaction))) {
+      enqueueIntent(outboxRef.current, queued.filter(i => i.transaction === transaction));
     }
+    writeJson(OUTBOX_KEY, outboxRef.current);
+    setPending(Object.keys(outboxRef.current).length);
+  }, [intents]);
 
-    const dirty = dirtySettings();
-    for (const [key, record] of current) {
-      const json = stableStringify(record.payload);
-      if (shadow[key] === json) continue;
-      // Jenis Konsol, Tarif per Jam, dan potongan harga konsol hanya dikirim
-      // bila memang diubah dari perangkat ini. Dan isi bawaan tidak pernah
-      // dikirim sebelum perangkat ini menerima data store dari pusat.
-      if (record.kind === SETTINGS_KIND && PROTECTED_SETTINGS.has(record.entity_id)) {
-        if (!dirty.has(record.entity_id)) continue;
-        // Isi bawaan aplikasi tidak pernah dikirim ke pusat. Perangkat yang
-        // datanya tergerus (penyimpanan penuh, data browser dibersihkan)
-        // karena itu tidak bisa lagi mengembalikan tarif store ke awal.
-        if (isDefaultProtectedSetting(record.entity_id, record.payload)) continue;
-      }
-      // Catat kolom mana yang diubah di perangkat ini, supaya kolom lain
-      // tidak ikut menimpa perubahan perangkat lain pada baris yang sama.
-      const base = parseJson(shadow[key]);
-      const fields = base ? changedFields(base, record.payload) : Object.keys(record.payload);
-      const prev = outbox[key];
-      const before = prev && !prev.deleted ? (prev.fields ?? Object.keys(prev.payload)) : [];
-      outbox[key] = { ...record, fields: Array.from(new Set([...before, ...fields])) };
-      changed = true;
-    }
-    // Hanya baris yang benar-benar dihapus di perangkat ini yang boleh
-    // dihapus di pusat: baris itu harus ada di snapshot sebelumnya.
-    const prevKeys = prevKeysRef.current;
-    if (prevKeys) {
-      for (const key of Object.keys(shadow)) {
-        if (current.has(key) || !prevKeys.has(key)) continue;
-        const [kind, ...rest] = key.split(":");
-        if (!kind || !isKnownKind(kind)) continue;
-        outbox[key] = {
-          kind,
-          entity_id: rest.join(":"),
-          payload: {},
-          deleted: true,
-        };
-        changed = true;
-      }
-    }
-    prevKeysRef.current = new Set(current.keys());
-
-
-    if (changed) {
-      writeJson(OUTBOX_KEY, outbox);
-      setPending(Object.keys(outbox).length);
-    }
-  }, [dirtySettings, applyRemote]);
-
-  // Catat perubahan lokal langsung. Jangan beri kesempatan tarikan berkala
-  // menimpa pengaturan yang baru diubah sebelum masuk antrean kirim.
   useEffect(() => {
     if (!hydrated || !loadedRef.current || !storeId || readyStoreId !== storeId) return;
     queueLocalChanges(state, storeId);
@@ -474,7 +386,7 @@ export function useStoreSync(options: {
     // terbaca. Kalau data lokal hilang (penyimpanan penuh/rusak) sementara
     // jejaknya masih ada, perangkat ini akan mengirim isi bawaan ke pusat —
     // inilah yang membuat Jenis Konsol & Tarif ter-reset. Paksa ambil ulang.
-    if (hasSyncHistory && storageLoaded && hasCompleteBaseline) {
+    if (hasSyncHistory && storageLoaded && hasCompleteBaseline && !navigator.onLine) {
       // Tanpa internet: pakai data perangkat supaya kasir tetap bisa bekerja.
       if (typeof navigator !== "undefined" && !navigator.onLine) {
         bootstrappedRef.current = true;
@@ -549,7 +461,7 @@ export function useStoreSync(options: {
     let cancelled = false;
     let retry: ReturnType<typeof setTimeout> | null = null;
     void (async () => {
-      const { data, error: bootstrapError } = await fetchAllStoreData(storeId, null, true);
+      const { data, error: bootstrapError } = await fetchAllStoreData(storeId, null);
       if (cancelled) return;
       if (bootstrapError) {
         setError(bootstrapError.message);
@@ -568,26 +480,19 @@ export function useStoreSync(options: {
         deleted: boolean;
         updated_at: string;
       }[];
-      if (remote.length > 0) {
-        const records: SyncRecord[] = remote.map((row) => ({
-          kind: row.kind,
-          entity_id: row.entity_id,
-          payload: row.payload ?? {},
-          deleted: row.deleted,
-        }));
-        // Baseline lengkap harus mengganti seluruh daftar hasil sinkron lama.
-        // Kalau hanya ditumpuk, baris lokal yang sudah tidak ada di pusat tetap
-        // hidup dan perangkat dapat terus menampilkan baseline bawaan/parsial.
-        // Perubahan offline tetap aman karena antrean lokal diterapkan kembali
-        // di atas baseline pusat, lalu dikirim pada tahap sinkron berikutnya.
-        const pendingRecords = Object.values(outboxRef.current);
-        applyRemote((prev) =>
-          applyRecords(applyRecords(clearSyncedLists(prev), records), pendingRecords),
-        );
-        noteShadow(records);
-        const newest = remote.at(-1)?.updated_at;
-        if (newest) localStorage.setItem(SINCE_KEY, newest);
+      const records: SyncRecord[] = remote.map(row => ({ ...row, payload: row.payload ?? {} }));
+      if (reconcileIntents(outboxRef.current, records)) {
+        toast.warning('Perubahan bertabrakan dengan data pusat. Data terbaru dimuat; periksa lalu ulangi tindakan yang masih diperlukan.', { duration: 15000 });
       }
+      // Includes the empty-server case: cached entities never become new writes.
+      const pendingRecords = Object.values(outboxRef.current);
+      applyRemote(prev => applyRecords(applyRecords(clearSyncedLists(prev), records), pendingRecords));
+      shadowRef.current = {};
+      noteShadow(records);
+      writeJson(OUTBOX_KEY, outboxRef.current);
+      setPending(pendingRecords.length);
+      const newest = remote.at(-1)?.updated_at;
+      if (newest) localStorage.setItem(SINCE_KEY, newest);
       localStorage.removeItem(FRESH_KEY);
       // Ditulis hanya setelah seluruh halaman berhasil diterapkan. Perangkat
       // dengan data parsial dari versi lama otomatis mengulang proses ini.
@@ -685,51 +590,21 @@ export function useStoreSync(options: {
         updated_at: string;
       }[];
       if (remote.length) {
-        // Gabungkan per kolom: kolom yang diubah di perangkat ini dipertahankan,
-        // kolom lain diambil dari pusat. Dua kasir yang mengubah bagian berbeda
-        // pada baris yang sama tidak lagi saling menimpa.
-        const merged: SyncRecord[] = [];
-        for (const row of remote) {
-          const record: SyncRecord = {
-            kind: row.kind,
-            entity_id: row.entity_id,
-            payload: row.payload ?? {},
-            deleted: row.deleted,
-          };
-          const key = recordKey(record.kind, record.entity_id);
-          const pending = outboxRef.current[key];
-          // Baris yang sudah dihapus di pusat selalu menang. Kalau tidak,
-          // perangkat yang masih menyimpan salinan lama akan menghidupkannya
-          // kembali — inilah yang membuat unit store lain muncul lagi.
-          if (record.deleted) {
-            delete outboxRef.current[key];
-            merged.push(record);
-            continue;
-          }
-          if (!pending) {
-            merged.push(record);
-            continue;
-          }
-          // Penghapusan lokal tetap dikirim ke pusat.
-          if (pending.deleted) continue;
-
-          const fields = pending.fields ?? Object.keys(pending.payload);
-          const payload = { ...record.payload };
-          for (const field of fields) {
-            if (field in pending.payload) payload[field] = pending.payload[field];
-            else delete payload[field];
-          }
-          const mergedRecord: SyncRecord = { ...record, payload };
-          merged.push(mergedRecord);
-          outboxRef.current[key] = { ...pending, payload };
+        const records: SyncRecord[] = remote.map(row => ({ ...row, payload: row.payload ?? {} }));
+        const conflicts = reconcileIntents(outboxRef.current, records);
+        if (conflicts) {
+          toast.warning('Perubahan antarperangkat bertabrakan. Data pusat dipertahankan; periksa lalu ulangi tindakan Anda.', { duration: 15000 });
+          const full = await fetchAllStoreData(storeId, null);
+          if (full.error) throw new Error(full.error.message);
+          applyRemote(prev => applyRecords(applyRecords(clearSyncedLists(prev), full.data), Object.values(outboxRef.current)));
+        } else {
+          applyRemote(prev => applyRecords(applyRecords(prev, records), Object.values(outboxRef.current)));
         }
-        if (merged.length) {
-          applyRemote((prev) => applyRecords(prev, merged));
-          noteShadow(merged);
-        }
+        noteShadow(records);
         writeJson(OUTBOX_KEY, outboxRef.current);
-        const newest = remote[remote.length - 1]!.updated_at;
-        localStorage.setItem(SINCE_KEY, newest);
+        setPending(Object.keys(outboxRef.current).length);
+        const newest = remote.at(-1)?.updated_at;
+        if (newest) localStorage.setItem(SINCE_KEY, newest);
       }
 
       // 2. Kirim perubahan lokal yang tersisa.
@@ -742,36 +617,35 @@ export function useStoreSync(options: {
             return record ? [[key, record] as const] : [];
           }),
         );
-        const rows = Array.from(sentByKey.values()).map((record) => ({
-          store_id: storeId,
-          kind: record.kind,
-          entity_id: record.entity_id,
-          payload: record.payload,
-          deleted: record.deleted,
-        }));
-        // Waktu perubahan ditentukan oleh pusat (nilai bawaan + pemicu tabel),
-        // bukan jam perangkat: jam yang meleset bisa membuat perubahan
-        // perangkat lain tidak pernah terbaca.
-        const { data: pushed, error: pushError } = await supabase
-          .from("store_data")
-          .upsert(rows as never, { onConflict: "store_id,kind,entity_id" })
-          .select("updated_at");
-        if (pushError) throw new Error(pushError.message);
-        const sent = Array.from(sentByKey.values());
-        for (const [key, sentRecord] of sentByKey) {
-          const currentRecord = outbox[key];
-          if (currentRecord && stableStringify(currentRecord) === stableStringify(sentRecord)) {
-            delete outbox[key];
+        const rows = Array.from(sentByKey.values());
+        const { data: result, error: pushError } = await supabase.rpc('store_apply_intents', {
+          _store_id: storeId,
+          _records: rows as never,
+        });
+        if (pushError) throw pushError;
+        const response = result as unknown as { accepted: boolean; records: SyncRecord[] };
+        if (!response.accepted) {
+          // The entire send is atomic: no orphan receipt/VOID on a rejected station.
+          for (const [key, sentRecord] of sentByKey) {
+            const current = outbox[key];
+            if (current?.transaction === sentRecord.transaction) delete outbox[key];
           }
+          const full = await fetchAllStoreData(storeId, null);
+          if (full.error) throw new Error(full.error.message);
+          applyRemote(prev => applyRecords(applyRecords(clearSyncedLists(prev), full.data), Object.values(outbox)));
+          toast.warning('Pusat menolak kiriman yang sudah tertinggal. Data terbaru dimuat; periksa dan ulangi tindakan yang diperlukan.', { duration: 15000 });
+        } else {
+          for (const [key, sentRecord] of sentByKey) {
+            const current = outbox[key];
+            if (current && canonical(current) === canonical(sentRecord)) delete outbox[key];
+            else if (current) current.base = sentRecord.deleted ? null : sentRecord.payload;
+          }
+          noteShadow(response.records);
         }
         writeJson(OUTBOX_KEY, outbox);
         setPending(Object.keys(outbox).length);
-        noteShadow(sent);
-        // Baris yang baru saja dikirim tidak perlu ditarik ulang.
-        const stamps = ((pushed ?? []) as { updated_at: string }[]).map((r) => r.updated_at);
-        const newest = stamps.length ? stamps.reduce((a, b) => (a > b ? a : b)) : null;
-        const currentSince = localStorage.getItem(SINCE_KEY) ?? EPOCH;
-        if (newest && newest > currentSince) localStorage.setItem(SINCE_KEY, newest);
+        // Never advance the pull cursor from push timestamps: another device's
+        // intervening update has not yet been read and would otherwise be skipped.
       }
       setError(null);
       setLastSyncedAt(Date.now());

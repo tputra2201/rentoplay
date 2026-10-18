@@ -35,6 +35,7 @@ import {
 } from "./report-range";
 import { ALARM_SOUNDS, type AlarmSound } from "./alarm";
 import { SETTINGS_KEYS } from "./sync-records";
+import { captureIntent, type IntentQueue } from "./sync-intent";
 
 /**
  * Waktu batas penutupan otomatis satu hari usaha: tepat pada jam tutup.
@@ -2540,7 +2541,15 @@ billingGlobal.__rentoplayBillingContext = BillingContext;
 
 
 export function BillingProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<State>(defaultState);
+  const [state, setRawState] = useState<State>(defaultState);
+  const intentsRef = useRef<IntentQueue['current']>([]);
+  const setState = useCallback((action: State | ((prev: State) => State)) => {
+    setRawState(prev => {
+      const next = typeof action === 'function' ? action(prev) : action;
+      intentsRef.current.push(...captureIntent(prev, next));
+      return next;
+    });
+  }, []);
   const stateRef = useRef<State>(state);
   stateRef.current = state;
   const [now, setNow] = useState(() => Date.now());
@@ -2596,7 +2605,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const loaded = migrateState(JSON.parse(raw));
-        setState(loaded);
+        setRawState(loaded);
         setStorageLoaded(true);
         // Sekali saja: pengaturan yang isinya sudah berbeda dari bawaan aplikasi
         // dianggap memang diatur di perangkat ini, supaya tetap bisa dikirim ke
@@ -2681,7 +2690,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
     const onStorage = (event: StorageEvent) => {
       if (event.key !== STORAGE_KEY || !event.newValue) return;
       try {
-        setState(migrateState(JSON.parse(event.newValue)));
+        setRawState(migrateState(JSON.parse(event.newValue)));
       } catch {
         /* ignore corrupt payload from other tab */
       }
@@ -2694,7 +2703,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
   // sesi yang dilunasi sebelum fitur nota otomatis ada.
   useEffect(() => {
     if (!hydrated) return;
-    setState((prev) => {
+    setRawState((prev) => {
       const missing = prev.stations.filter((station) => {
         const session = station.session;
         if (!session) return false;
@@ -3317,7 +3326,8 @@ export function BillingProvider({ children }: { children: ReactNode }) {
   // diketahui, data lokal dari store lain dibuang sebelum satu baris pun
   // dikirim, dan data baru langsung bertanda store ini.
   const bindStore = useCallback((id: string, keepLocal = false) => {
-    setState((prev) => {
+    intentsRef.current = [];
+    setRawState((prev) => {
       if (prev.storeId === id) return prev;
       // keepLocal: data di perangkat ini memang milik store ini (versi lama
       // belum menandainya). Cukup diberi tanda, jangan dihapus, supaya
@@ -3345,7 +3355,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
   // suatu perangkat menimpanya lagi jelas terlihat kapan dan menjadi apa.
   const applyRemote = useCallback(
     (apply: (prev: State) => State) => {
-      setState((prev) => {
+      setRawState((prev) => {
         const next = apply(prev);
         const before = JSON.stringify([prev.consoleTypes, prev.rates]);
         const after = JSON.stringify([next.consoleTypes, next.rates]);
@@ -3367,6 +3377,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
     enabled: Boolean(authSession),
     storageLoaded,
     dirtySettings,
+    intents: intentsRef,
     applyRemote,
     bindStore,
   });
@@ -5815,11 +5826,11 @@ export function BillingProvider({ children }: { children: ReactNode }) {
       replaceAll: (data) => {
         // Pemulihan dari berkas cadangan memang dimaksudkan menimpa pusat.
         markSettingsDirty("consoleTypes", "rates", "consoleDiscounts");
-        setState(migrateState(data));
+        setState({ ...migrateState(data), storeId: state.storeId });
         update((prev) => withLog(prev, "Pulihkan data dari berkas cadangan"));
       },
       resetAll: () => {
-        setState(JSON.parse(JSON.stringify(defaultState)) as State);
+        setState({ ...JSON.parse(JSON.stringify(defaultState)), storeId: state.storeId } as State);
         update((prev) => withLog(prev, "Reset seluruh data aplikasi"));
       },
       addLog,
