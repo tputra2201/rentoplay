@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] Kontrol TV: splash otomatis saat hidup, PIN angka di Setup Station, release terpisah dari timer, volume, Home/HDMI, Wake-on-LAN dan standby. Uji fisik serta build/install kedua APK memerlukan perangkat pengguna.
+- [x] Implementasi kontrol TV: splash saat SCREEN_ON/boot, PIN angka yang dapat diubah, release terpisah dari timer, volume, Home/HDMI perangkat, Wake-on-LAN dan standby dengan izin opsional. Kasir 1.5.0/Companion 1.3.0; 31 tes lulus, sumber Android dikompilasi terhadap API35, uji JVM PIN dan alarm lulus, pengaturan tersimpan/Release diuji pada akun aktif dengan simulasi bridge native.
+- [ ] Build/install pembaruan APK Kasir 1.5.0 dan Companion 1.3.0, kirim pengaturan, uji fisik nyala remote/tombol/WOL, PIN, standby dan Home/HDMI — memerlukan perangkat TV/tablet pengguna; dukungan daya/input tergantung firmware TCL.
 
 - [x] Perkuat sinkronisasi multi-perangkat: antrean aksi eksplisit per tab, baseline pusat sebelum layar dibuka, RPC atomik menolak base basi/kiriman ganda, sesi retired dan shift close dilindungi, konflik disalin untuk pemeriksaan. Pengujian aturan lokal dan RPC autentikasi lulus; baris uji sementara dibersihkan.
 - [ ] Publikasikan pembaruan web dan buka ulang pada semua perangkat — menunggu perintah publikasi pengguna; pengaman pusat sudah aktif dan menolak pengiriman versi lama. Uji operasional beberapa kasir fisik bersamaan masih menunggu perangkat pengguna.
