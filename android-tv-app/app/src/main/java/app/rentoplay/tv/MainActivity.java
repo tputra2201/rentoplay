@@ -46,6 +46,13 @@ public final class MainActivity extends Activity {
         test.setText("Tes tampilan");
         test.setOnClickListener(v -> OverlayService.showLocal(this, "RenToPlay - Tes", "Tampilan notifikasi di TV ini.", "warning", 6));
         root.addView(title); root.addView(status); root.addView(perm); root.addView(test);
+        Button power = new Button(this); power.setText("Izinkan kontrol standby");
+        power.setOnClickListener(v -> startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))); root.addView(power);
+        Button pairing = new Button(this); pairing.setText("Tampilkan kode kontrol kasir");
+        pairing.setOnClickListener(v -> new android.app.AlertDialog.Builder(this)
+            .setTitle("Kode kontrol kasir — rahasia")
+            .setMessage(OverlayService.controlToken(this))
+            .setPositiveButton("Tutup", null).show()); root.addView(pairing);
         setContentView(root);
         if (Build.VERSION.SDK_INT >= 33) requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 1);
     }
@@ -56,7 +63,7 @@ public final class MainActivity extends Activity {
         boolean ok = Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(this);
         status.setText("IP TV ini: " + ip() + "\nPort: " + OverlayService.PORT
                 + "\nIzin tampil di atas aplikasi: " + (ok ? "AKTIF" : "BELUM — tekan tombol di bawah")
-                + "\n\nIsi IP ini di RenToPlay kasir (Setup Store → Notifikasi TV).");
+                + "\n\nIsi IP dan kode kontrol di kasir (Setup → Station).");
     }
 
     static String ip() {

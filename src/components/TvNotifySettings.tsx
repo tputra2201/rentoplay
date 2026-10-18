@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useBilling } from "@/lib/billing-store";
 import { useStoreInfo } from "@/lib/store-info";
+import { TvControlPanel } from "@/components/TvControlPanel";
 import {
   DEFAULT_TV_CONFIG,
   saveTvConfig,
@@ -89,7 +90,8 @@ export function TvNotifySettings() {
           {ready && !modern && " Pasang APK kasir terbaru agar pesan kustom & layar penuh aktif."}
         </p>
         {stations.map((st) => (
-          <div key={st.id} className="flex flex-wrap items-center gap-2">
+          <div key={st.id} className="space-y-3 border-b border-border pb-4">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="w-24 shrink-0 truncate font-medium">{st.name}</span>
             <Input
               inputMode="decimal"
@@ -109,6 +111,8 @@ export function TvNotifySettings() {
             <Button size="sm" onClick={() => release(st.id, st.name)} disabled={!modern || !ips[st.id]}>
               Lepas Layar
             </Button>
+          </div>
+          <TvControlPanel stationId={st.id} setup />
           </div>
         ))}
       </div>

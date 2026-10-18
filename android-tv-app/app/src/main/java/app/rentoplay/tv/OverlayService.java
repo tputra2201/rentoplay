@@ -6,6 +6,9 @@ import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.BroadcastReceiver;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -14,6 +17,9 @@ import android.graphics.PixelFormat;
 import android.graphics.drawable.GradientDrawable;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
+import android.media.tv.TvInputManager;
+import android.media.tv.TvInputInfo;
+import android.media.tv.TvContract;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
@@ -22,6 +28,7 @@ import android.os.Looper;
 import android.provider.Settings;
 import android.util.Base64;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageView;
@@ -29,6 +36,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import org.json.JSONObject;
+import org.json.JSONArray;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
@@ -47,6 +55,19 @@ public final class OverlayService extends Service {
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static View current;
     private ServerSocket server;
+    private static View splashView;
+    private final BroadcastReceiver screenReceiver = new BroadcastReceiver() {
+        @Override public void onReceive(Context c, Intent i) {
+            if (Intent.ACTION_SCREEN_ON.equals(i.getAction())) new Thread(() -> showWelcome(c)).start();
+        }
+    };
+    static SharedPreferences controlPrefs(Context c) { return c.getSharedPreferences("rentoplay.tv-control", MODE_PRIVATE); }
+    static synchronized String controlToken(Context c) {
+        SharedPreferences p = controlPrefs(c);
+        String token = p.getString("token", "");
+        if (token.isEmpty()) { token = java.util.UUID.randomUUID().toString(); p.edit().putString("token", token).commit(); }
+        return token;
+    }
 
     static void start(Context c) {
         Intent i = new Intent(c, OverlayService.class);
@@ -65,12 +86,18 @@ public final class OverlayService extends Service {
         if (Build.VERSION.SDK_INT >= 34) startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
         else startForeground(1, n);
         new Thread(this::serve, "rtp-server").start();
+        IntentFilter filter = new IntentFilter(Intent.ACTION_SCREEN_ON);
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(screenReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        else registerReceiver(screenReceiver, filter);
+        new Thread(() -> showWelcome(this)).start();
     }
 
     @Override public int onStartCommand(Intent i, int f, int id) { return START_STICKY; }
     @Override public IBinder onBind(Intent i) { return null; }
     @Override public void onDestroy() {
         try { if (server != null) server.close(); } catch (Exception ignored) { }
+        unregisterReceiver(screenReceiver);
+        dismissSplash();
         super.onDestroy();
     }
 
@@ -101,11 +128,13 @@ public final class OverlayService extends Service {
             int read = 0;
             while (read < len) { int r = in.read(body, read, len - read); if (r < 0) break; read += r; }
             String title = "RenToPlay", msg = "", level = "info", subtitle = "", logo = "";
+            JSONObject document = new JSONObject();
             boolean block = false;
             int dur = 10;
             if (method.equals("POST") && read > 0) {
                 if (read != len) return;
                 JSONObject j = new JSONObject(new String(body, 0, read, StandardCharsets.UTF_8));
+                document = j;
                 title = j.optString("title", title); msg = j.optString("message", msg);
                 level = j.optString("level", level); dur = j.optInt("duration", dur);
                 block = j.optBoolean("block", false); subtitle = j.optString("subtitle", "");
@@ -120,15 +149,17 @@ public final class OverlayService extends Service {
                     else if (p[0].equals("duration")) dur = Integer.parseInt(v);
                 }
             }
-            boolean show = path.startsWith("/notify") && !method.equals("OPTIONS");
-            if (path.startsWith("/dismiss")) dismissBlock();
+            boolean show = path.equals("/notify") && method.equals("POST");
+            JSONObject result = new JSONObject(); result.put("ok", true); result.put("app", "rentoplay-tv");
+            if (path.equals("/control") && method.equals("POST")) result = control(document);
+            else if (path.equals("/dismiss") && method.equals("POST")) dismissBlock();
             else if (show && block) showBlock(this, title, subtitle, msg, logo);
             else if (show) showLocal(this, title, msg, level, dur);
-            String res = "{\"ok\":true,\"app\":\"rentoplay-tv\"}";
+            String res = result.toString();
             OutputStream out = sock.getOutputStream();
             out.write(("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n"
                     + "Access-Control-Allow-Headers: Content-Type\r\nAccess-Control-Allow-Private-Network: true\r\n"
-                    + "Content-Length: " + res.length() + "\r\nConnection: close\r\n\r\n" + res).getBytes(StandardCharsets.UTF_8));
+                    + "Content-Length: " + res.getBytes(StandardCharsets.UTF_8).length + "\r\nConnection: close\r\n\r\n" + res).getBytes(StandardCharsets.UTF_8));
             out.flush();
         } catch (Exception ignored) { }
     }
@@ -147,6 +178,114 @@ public final class OverlayService extends Service {
     }
 
     private static View blockView;
+
+    private JSONObject control(JSONObject j) throws Exception {
+        JSONObject result = new JSONObject();
+        if (!java.security.MessageDigest.isEqual(controlToken(this).getBytes(StandardCharsets.UTF_8), j.optString("token").getBytes(StandardCharsets.UTF_8))) {
+            result.put("ok", false); result.put("error", "Kode kontrol TV tidak cocok."); return result;
+        }
+        String action = j.optString("action");
+        if (action.equals("configure")) {
+            String pin = j.optString("pin");
+            if (!RemotePin.valid(pin)) { result.put("ok", false); result.put("error", "PIN harus 4–6 angka."); return result; }
+            String salt = java.util.UUID.randomUUID().toString();
+            boolean saved = controlPrefs(this).edit().putString("salt", salt).putString("pinHash", RemotePin.hash(pin, salt))
+                .putInt("pinLength", pin.length())
+                .putString("title", j.optString("title")).putString("message", j.optString("message"))
+                .putString("logo", j.optString("logo")).putString("store", j.optString("store"))
+                .putBoolean("enabled", j.optBoolean("enabled")).commit();
+            if (saved && !j.optBoolean("enabled")) dismissSplash();
+            result.put("ok", saved); if (!saved) result.put("error", "Pengaturan TV gagal disimpan."); return result;
+        }
+        if (action.equals("splash")) { showWelcome(this); result.put("ok", controlPrefs(this).getBoolean("enabled", false)); if (!result.getBoolean("ok")) result.put("error", "Aktifkan dan kirim pengaturan splash terlebih dahulu."); return result; }
+        if (action.equals("releaseSplash")) { dismissSplash(); result.put("ok", true); return result; }
+        java.util.concurrent.FutureTask<JSONObject> task = new java.util.concurrent.FutureTask<>(() -> {
+            JSONObject r = new JSONObject(); r.put("ok", true);
+            try {
+                AudioManager audio = (AudioManager) getSystemService(AUDIO_SERVICE);
+                if (action.equals("volume")) {
+                    int percent = Math.max(0, Math.min(100, j.optInt("value")));
+                    audio.setStreamVolume(AudioManager.STREAM_MUSIC, Math.round(audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC) * percent / 100f), 0);
+                } else if (action.equals("home")) {
+                    startActivity(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                } else if (action.equals("standby")) {
+                    if (!TvPowerService.standby()) throw new IllegalStateException("Aktifkan RenToPlay TV — Standby di pengaturan Aksesibilitas TV. TV harus mendukung kunci layar.");
+                } else if (action.equals("input")) {
+                    TvInputManager manager = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
+                    String id = j.optString("inputId"); boolean found = false;
+                    for (TvInputInfo info : manager.getTvInputList()) if (info.getId().equals(id)) found = true;
+                    if (!found) throw new IllegalArgumentException("Input TV tidak tersedia.");
+                    Intent input = new Intent(Intent.ACTION_VIEW, TvContract.buildChannelUriForPassthroughInput(id)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    if (input.resolveActivity(getPackageManager()) == null) throw new IllegalStateException("TV tidak menyediakan pemindahan HDMI melalui aplikasi.");
+                    startActivity(input);
+                } else if (!action.equals("status")) throw new IllegalArgumentException("Perintah tidak dikenal.");
+                r.put("volume", Math.round(audio.getStreamVolume(AudioManager.STREAM_MUSIC) * 100f / Math.max(1, audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC))));
+                JSONArray inputs = new JSONArray();
+                TvInputManager manager = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
+                if (manager != null) for (TvInputInfo info : manager.getTvInputList()) if (info.isPassthroughInput()) {
+                    JSONObject entry = new JSONObject(); entry.put("id", info.getId()); entry.put("label", info.loadLabel(this).toString()); inputs.put(entry);
+                }
+                r.put("inputs", inputs);
+            } catch (Exception e) { r.put("ok", false); r.put("error", e.getMessage() == null ? "Perintah tidak didukung TV ini." : e.getMessage()); }
+            return r;
+        });
+        MAIN.post(task); return task.get(5, java.util.concurrent.TimeUnit.SECONDS);
+    }
+
+    static void dismissSplash() {
+        MAIN.post(() -> { if (splashView == null) return;
+            try { ((WindowManager) splashView.getContext().getSystemService(WINDOW_SERVICE)).removeView(splashView); } catch (Exception ignored) { }
+            splashView = null;
+        });
+    }
+
+    static void showWelcome(Context ctx) {
+        SharedPreferences p = controlPrefs(ctx);
+        if (!p.getBoolean("enabled", false)) return;
+        Bitmap decoded = null;
+        String logo = p.getString("logo", "");
+        try {
+            if (logo.startsWith("data:image/") && logo.contains(";base64,")) {
+                byte[] bytes = Base64.decode(logo.substring(logo.indexOf(',') + 1), Base64.DEFAULT);
+                decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+            } else if (logo.startsWith("https://") || logo.startsWith("http://")) {
+                URLConnection c = new URL(logo).openConnection(); c.setConnectTimeout(3000); c.setReadTimeout(3000);
+                try (InputStream in = c.getInputStream()) { decoded = BitmapFactory.decodeStream(in); }
+            }
+        } catch (Exception ignored) { }
+        final Bitmap image = decoded;
+        MAIN.post(() -> {
+            if (splashView != null || !Settings.canDrawOverlays(ctx)) return;
+            LinearLayout box = new LinearLayout(ctx); box.setOrientation(LinearLayout.VERTICAL); box.setGravity(Gravity.CENTER);
+            box.setBackgroundColor(Color.rgb(11, 15, 26)); box.setPadding(64, 48, 64, 48);
+            if (image != null) { ImageView iv = new ImageView(ctx); iv.setImageBitmap(image); iv.setScaleType(ImageView.ScaleType.FIT_CENTER); box.addView(iv, new LinearLayout.LayoutParams(360, 240)); }
+            TextView title = new TextView(ctx); title.setText(p.getString("title", "Selamat Datang")); title.setTextSize(44); title.setTextColor(Color.WHITE); title.setGravity(Gravity.CENTER); box.addView(title);
+            TextView store = new TextView(ctx); store.setText(p.getString("store", "")); store.setTextSize(28); store.setTextColor(Color.LTGRAY); store.setGravity(Gravity.CENTER); box.addView(store);
+            TextView message = new TextView(ctx); message.setText(p.getString("message", "")); message.setTextSize(26); message.setTextColor(Color.WHITE); message.setGravity(Gravity.CENTER); box.addView(message);
+            TextView dots = new TextView(ctx); dots.setTextSize(24); dots.setTextColor(Color.LTGRAY); dots.setPadding(0, 32, 0, 0); box.addView(dots);
+            StringBuilder entered = new StringBuilder(); int[] attempts = {0}; long[] blockedUntil = {0};
+            box.setFocusableInTouchMode(true);
+            box.setOnKeyListener((view, code, event) -> {
+                if (code == KeyEvent.KEYCODE_VOLUME_UP || code == KeyEvent.KEYCODE_VOLUME_DOWN || code == KeyEvent.KEYCODE_VOLUME_MUTE || code == KeyEvent.KEYCODE_POWER) return false;
+                if (event.getAction() != KeyEvent.ACTION_DOWN) return true;
+                if (System.currentTimeMillis() < blockedUntil[0]) return true;
+                if (code == KeyEvent.KEYCODE_DEL) { entered.setLength(0); dots.setText(""); return true; }
+                if (code >= KeyEvent.KEYCODE_0 && code <= KeyEvent.KEYCODE_9) {
+                    entered.append(code - KeyEvent.KEYCODE_0); dots.setText(new String(new char[entered.length()]).replace('\0', '•'));
+                    if (RemotePin.matches(entered.toString(), p.getString("salt", ""), p.getString("pinHash", ""))) { dismissSplash(); return true; }
+                    // A shorter PIN prefix may be valid, but unmatched inputs reset at the configured length.
+                    if (entered.length() >= p.getInt("pinLength", 6)) {
+                        entered.setLength(0); attempts[0]++; dots.setText("PIN salah");
+                        if (attempts[0] >= 5) { attempts[0] = 0; blockedUntil[0] = System.currentTimeMillis() + 30000; dots.setText("Coba lagi dalam 30 detik"); }
+                    }
+                }
+                return true;
+            });
+            int type = Build.VERSION.SDK_INT >= 26 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
+            WindowManager.LayoutParams lp = new WindowManager.LayoutParams(-1, -1, type, WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN, PixelFormat.TRANSLUCENT);
+            try { ((WindowManager) ctx.getSystemService(WINDOW_SERVICE)).addView(box, lp); splashView = box; box.requestFocus(); } catch (Exception e) { android.util.Log.w("RenToPlayTV", "Splash not supported", e); }
+        });
+    }
 
     /** Lepas layar penuh (dipanggil kasir). */
     static void dismissBlock() {
