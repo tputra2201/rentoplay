@@ -3331,7 +3331,10 @@ export function BillingProvider({ children }: { children: ReactNode }) {
   // diketahui, data lokal dari store lain dibuang sebelum satu baris pun
   // dikirim, dan data baru langsung bertanda store ini.
   const bindStore = useCallback((id: string, keepLocal = false) => {
-    intentsRef.current = [];
+    if (stateRef.current.storeId !== id && !keepLocal) {
+      intentsRef.current = [];
+      saveIntentJournal([]);
+    }
     setRawState((prev) => {
       if (prev.storeId === id) return prev;
       // keepLocal: data di perangkat ini memang milik store ini (versi lama

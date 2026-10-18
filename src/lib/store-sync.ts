@@ -350,7 +350,13 @@ export function useStoreSync(options: {
     if (!queued.length) return;
     // Only changed entities from an explicit local mutation can be published.
     for (const transaction of new Set(queued.map(i => i.transaction))) {
-      enqueueIntent(outboxRef.current, queued.filter(i => i.transaction === transaction));
+      const records = queued.filter(i => i.transaction === transaction).map(intent => {
+        const key = recordKey(intent.kind, intent.entity_id);
+        return bootstrappedRef.current && shadowRef.current[key] === undefined && !outboxRef.current[key]
+          ? { ...intent, base: null }
+          : intent;
+      });
+      enqueueIntent(outboxRef.current, records);
     }
     writeJson(outboxKeyRef.current, outboxRef.current);
     saveIntentJournal(intents.current);
