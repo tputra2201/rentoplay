@@ -528,7 +528,9 @@ export function useStoreSync(options: {
       // perangkat walau ada baris yang pernah terlewat.
       const auditNow = Date.now() - lastAuditRef.current >= AUDIT_EVERY_MS;
       const since = auditNow ? null : (localStorage.getItem(SINCE_KEY) ?? EPOCH);
-      const { data, error: pullError } = await fetchAllStoreData(storeId, since);
+      // Audit penuh hanya mengambil baris aktif lalu MENGGANTI daftar lokal,
+      // sehingga baris terhapus yang menumpuk tidak perlu diunduh ulang.
+      const { data, error: pullError } = await fetchAllStoreData(storeId, since, auditNow);
       if (pullError) throw new Error(pullError.message);
       if (auditNow) lastAuditRef.current = Date.now();
       // Include actions committed while the network read was in flight before
@@ -547,7 +549,12 @@ export function useStoreSync(options: {
         const conflicts = reconcileIntents(outboxRef.current, records, preserveConflicts);
         if (conflicts) {
           toast.warning('Perubahan antarperangkat bertabrakan. Data pusat dipertahankan; periksa lalu ulangi tindakan Anda.', { duration: 15000 });
-          const full = await fetchAllStoreData(storeId, null);
+        }
+        if (auditNow) {
+          applyRemote(prev => applyRecords(applyRecords(clearSyncedLists(prev), records), Object.values(outboxRef.current)));
+          shadowRef.current = {};
+        } else if (conflicts) {
+          const full = await fetchAllStoreData(storeId, null, true);
           if (full.error) throw new Error(full.error.message);
           applyRemote(prev => applyRecords(applyRecords(clearSyncedLists(prev), full.data), Object.values(outboxRef.current)));
         } else {
@@ -557,7 +564,8 @@ export function useStoreSync(options: {
         writeJson(outboxKeyRef.current, outboxRef.current);
         setPending(Object.keys(outboxRef.current).length);
         const newest = remote.at(-1)?.updated_at;
-        if (newest) localStorage.setItem(SINCE_KEY, newest);
+        const cursor = localStorage.getItem(SINCE_KEY);
+        if (newest && (!cursor || newest > cursor)) localStorage.setItem(SINCE_KEY, newest);
       }
 
       // 2. Kirim perubahan lokal yang tersisa.
