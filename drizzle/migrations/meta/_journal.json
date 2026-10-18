@@ -8,6 +8,13 @@
       "when": 1792334607438,
       "tag": "0000_atomic_explicit_store_intents",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792334957680,
+      "tag": "0001_validate_store_intent_batches",
+      "breakpoints": true
     }
   ]
 }

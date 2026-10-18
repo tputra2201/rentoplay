@@ -431,6 +431,10 @@ export type Database = {
             }
             Returns: number
           }
+      validate_store_intent_batch: {
+        Args: { _records: Json }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role:
