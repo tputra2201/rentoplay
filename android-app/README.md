@@ -3,7 +3,7 @@
 Aplikasi Android ini membuka RenToPlay resmi dan mencetak langsung ke printer Bluetooth
 Classic ESC/POS, termasuk Kassen MT-300 VL 80 mm. RawBT tidak diperlukan.
 
-Versi 1.5.0 menambahkan kontrol TV dengan balasan hasil, Wake-on-LAN, volume, Home/HDMI, serta pengaturan dan Release Splash. Alarm dan printer Classic/BLE tetap didukung.
+Versi 1.6.0 memperluas Wake-on-LAN ke broadcast subnet yang cocok dengan IP TV, broadcast umum dan unicast, diulang tiga kali. Pengaturan pola arah/OK membutuhkan Companion 1.4.0 dan versi web terbaru. Alarm dan printer Classic/BLE tetap didukung. Balasan Nyalakan berarti paket terkirim, bukan konfirmasi TV hidup; Network Standby dan dukungan WOL/WoWLAN pada TV tetap diperlukan. Tidak memakai endpoint Cast tebakan.
 Build ulang lalu pasang APK ini sebagai pembaruan aplikasi lama (jangan hapus aplikasi agar IP Station tetap tersimpan).
 Tombol Release pada kartu Station melepas layar penuh TV tanpa mengakhiri sesi/tagihan.
 

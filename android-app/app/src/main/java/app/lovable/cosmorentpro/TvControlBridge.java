@@ -44,17 +44,31 @@ public final class TvControlBridge {
     @JavascriptInterface public void wake(String id, String mac, String ip) {
         new Thread(() -> {
             try {
-                if (!validIp(ip) || mac == null || !mac.matches("(?i)[0-9a-f]{2}([:-][0-9a-f]{2}){5}")) throw new IOException();
-                String[] parts = mac.split("[:-]"); byte[] packet = new byte[102];
-                java.util.Arrays.fill(packet, 0, 6, (byte) 255);
-                for (int i = 0; i < 16; i++) for (int j = 0; j < 6; j++) packet[6 + i * 6 + j] = (byte) Integer.parseInt(parts[j], 16);
-                try (DatagramSocket socket = new DatagramSocket()) {
-                    socket.setBroadcast(true);
-                    for (int port : new int[]{9, 7}) {
-                        socket.send(new DatagramPacket(packet, packet.length, InetAddress.getByName("255.255.255.255"), port));
-                        socket.send(new DatagramPacket(packet, packet.length, InetAddress.getByName(ip), port));
+                if (!validIp(ip)) throw new IOException();
+                byte[] packet = WakePacket.magic(mac);
+                InetAddress target = InetAddress.getByName(ip);
+                java.util.Set<InetAddress> destinations = new java.util.LinkedHashSet<>();
+                destinations.add(InetAddress.getByName("255.255.255.255")); destinations.add(target);
+                for (NetworkInterface network : java.util.Collections.list(NetworkInterface.getNetworkInterfaces())) {
+                    if (!network.isUp() || network.isLoopback()) continue;
+                    for (InterfaceAddress address : network.getInterfaceAddresses()) {
+                        if (!(address.getAddress() instanceof Inet4Address)) continue;
+                        byte[] broadcast = WakePacket.broadcast(address.getAddress().getAddress(), address.getNetworkPrefixLength(), target.getAddress());
+                        if (broadcast != null) destinations.add(InetAddress.getByAddress(broadcast));
                     }
                 }
+                int sent = 0;
+                try (DatagramSocket socket = new DatagramSocket()) {
+                    socket.setBroadcast(true);
+                    for (int attempt = 0; attempt < 3; attempt++) {
+                        for (InetAddress destination : destinations) for (int port : new int[]{9, 7}) {
+                            try { socket.send(new DatagramPacket(packet, packet.length, destination, port)); sent++; }
+                            catch (IOException ignored) { /* A filtered destination must not block the others. */ }
+                        }
+                        if (attempt < 2) Thread.sleep(150);
+                    }
+                }
+                if (sent == 0) throw new IOException();
                 JSONObject j = new JSONObject(); j.put("ok", true); reply(id, j);
             } catch (Exception e) { reply(id, error("Periksa MAC TV. Wake-on-LAN perlu didukung TV dan mode standby jaringan.")); }
         }, "rtp-wake").start();
