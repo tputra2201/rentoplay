@@ -62,8 +62,8 @@ export async function controlTv(id: string, action: string, data: Record<string,
   const settings = tvControlSettings(id);
   if (action !== "wake" && !settings.token.trim()) throw new Error("Isi kode kontrol dari aplikasi TV di Setup Station.");
   if (action === "wake") {
-    // WoL sebagai cadangan; perintah bangun utama dikirim ke Companion lewat HTTP
-    // karena paket WoL sering diblokir router Wi-Fi.
+    // Perintah bangun utama dikirim ke Companion lewat HTTP karena paket WoL
+    // sering diblokir router Wi-Fi; WoL tetap dikirim sebagai cadangan.
     const wol = new Promise<TvControlResult>((resolve, reject) => {
       const requestId = crypto.randomUUID();
       const finish = (event: Event) => {
@@ -80,7 +80,10 @@ export async function controlTv(id: string, action: string, data: Record<string,
       catch (e) { clearTimeout(timeout); window.removeEventListener("rentoplay:tv-control-result", finish); reject(e); }
     });
     if (settings.token.trim()) {
-      try { void sendControlRequest(bridge, ip, JSON.stringify({ action: "wake", token: settings.token })).catch(() => {}); } catch { /* Companion lama belum mendukung bangun; WoL tetap jalan. */ }
+      // Konfirmasi nyata dari Companion: jika TV merespons, selesai lebih cepat
+      // tanpa menunggu hasil WoL.
+      const http = sendControlRequest(bridge, ip, JSON.stringify({ action: "wake", token: settings.token }));
+      return Promise.any([http, wol]).catch(() => wol);
     }
     return wol;
   }
