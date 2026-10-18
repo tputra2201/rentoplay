@@ -162,6 +162,7 @@ export type Database = {
           entity_id: string
           kind: string
           payload: Json
+          retired_session_before: number
           store_id: string
           updated_at: string
         }
@@ -171,6 +172,7 @@ export type Database = {
           entity_id: string
           kind: string
           payload?: Json
+          retired_session_before?: number
           store_id: string
           updated_at?: string
         }
@@ -180,6 +182,7 @@ export type Database = {
           entity_id?: string
           kind?: string
           payload?: Json
+          retired_session_before?: number
           store_id?: string
           updated_at?: string
         }
@@ -411,6 +414,10 @@ export type Database = {
         }[]
       }
       developer_switch_store: { Args: { _store_id: string }; Returns: string }
+      store_apply_intents: {
+        Args: { _records: Json; _store_id: string }
+        Returns: Json
+      }
       store_set_device_access:
         | {
             Args: { _allowed_ips: string[]; _device_code: string }
@@ -424,6 +431,10 @@ export type Database = {
             }
             Returns: number
           }
+      validate_store_intent_batch: {
+        Args: { _records: Json }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role:

@@ -741,6 +741,8 @@ export const Route = createFileRoute("/_authenticated/store")({
         property: "og:description",
         content: "Data identitas outlet rental PlayStation yang diatur oleh Installer.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: StorePage,

@@ -390,6 +390,10 @@ function AppShell() {
                   {sync.online
                     ? sync.pending > 0
                       ? `Mengirim ${sync.pending}`
+                      : !sync.ready
+                        ? "Memuat data pusat"
+                        : sync.error
+                          ? "Perlu diperiksa"
                       : sync.syncing
                         ? "Menyegarkan"
                         : "Tersinkron"
@@ -557,7 +561,13 @@ function AppShell() {
               </div>
             )}
 
-            {blocked ? (
+            {session && !isAuthPage && !sync.ready ? (
+              <div className="flex flex-col items-center gap-3 py-16 text-muted-foreground" role="status">
+                <RefreshCw className="size-6 animate-spin" />
+                <p>Memuat data terbaru dari pusat…</p>
+                {sync.error && <p className="text-sm text-destructive">{sync.error}</p>}
+              </div>
+            ) : blocked ? (
               <div className="surface-panel mx-auto max-w-md p-8 text-center">
                 <h1 className="text-xl font-semibold">Akses terbatas</h1>
                 <p className="mt-2 text-sm text-muted-foreground">

@@ -31,6 +31,8 @@ export const Route = createFileRoute("/_authenticated/")({
         content:
           "Pantau status dan timer setiap TV rental PlayStation secara real-time.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Dashboard,

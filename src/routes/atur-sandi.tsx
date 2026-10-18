@@ -25,6 +25,8 @@ export const Route = createFileRoute("/atur-sandi")({
         property: "og:description",
         content: "Halaman pembuatan kata sandi bagi staf yang diundang Admin.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: AturSandiPage,

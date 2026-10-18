@@ -165,6 +165,7 @@ export function applyRecords(
     voids: [...(state.voids ?? [])],
     cafeTables: [...state.cafeTables],
     playingCards: [...state.playingCards],
+    cardBackups: [...(state.cardBackups ?? [])],
     cardEntries: [...state.cardEntries],
     cashCategories: [...state.cashCategories],
     cashGroups: [...(state.cashGroups ?? [])],
