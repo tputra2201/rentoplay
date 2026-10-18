@@ -369,6 +369,27 @@ export function useStoreSync(options: {
     const outbox = outboxRef.current;
     let changed = false;
 
+    // Pemeriksaan pertama setelah aplikasi dibuka: perubahan asli selalu sudah
+    // masuk antrean saat dibuat. Baris yang berbeda dari salinan pusat tetapi
+    // TIDAK ada di antrean berarti data lokal basi (mis. penyimpanan iPhone
+    // gagal menulis data terbaru). Jangan kirim — kembalikan ke salinan pusat.
+    if (!initialCheckedRef.current) {
+      initialCheckedRef.current = true;
+      const restore: SyncRecord[] = [];
+      for (const [key, record] of current) {
+        const known = shadow[key];
+        if (known === undefined || outbox[key]) continue;
+        if (known === stableStringify(record.payload)) continue;
+        const payload = parseJson(known);
+        if (payload) restore.push({ ...record, payload, deleted: false });
+      }
+      prevKeysRef.current = new Set(current.keys());
+      if (restore.length) {
+        applyRemote((prev) => applyRecords(prev, restore));
+        return;
+      }
+    }
+
     const dirty = dirtySettings();
     for (const [key, record] of current) {
       const json = stableStringify(record.payload);
