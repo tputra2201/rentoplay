@@ -200,11 +200,11 @@ public final class OverlayService extends Service {
         }
         String action = j.optString("action");
         if (action.equals("configure")) {
-            String pin = j.optString("pin");
-            if (!RemotePin.valid(pin)) { result.put("ok", false); result.put("error", "PIN harus 4–6 angka."); return result; }
+            String pin = j.optString("unlockPattern");
+            if (!RemotePin.validPattern(pin)) { result.put("ok", false); result.put("error", "Pola remote harus 4–6 tombol arah/OK. Perbarui pengaturan kasir."); return result; }
             String salt = java.util.UUID.randomUUID().toString();
             boolean saved = controlPrefs(this).edit().putString("salt", salt).putString("pinHash", RemotePin.hash(pin, salt))
-                .putInt("pinLength", pin.length())
+                .putInt("pinLength", pin.length()).putBoolean("directionPattern", true)
                 .putString("title", j.optString("title")).putString("message", j.optString("message"))
                 .putString("logo", j.optString("logo")).putString("store", j.optString("store"))
                 .putBoolean("enabled", j.optBoolean("enabled")).commit();
@@ -281,15 +281,18 @@ public final class OverlayService extends Service {
             box.setFocusableInTouchMode(true);
             box.setOnKeyListener((view, code, event) -> {
                 if (code == KeyEvent.KEYCODE_VOLUME_UP || code == KeyEvent.KEYCODE_VOLUME_DOWN || code == KeyEvent.KEYCODE_VOLUME_MUTE || code == KeyEvent.KEYCODE_POWER) return false;
-                if (event.getAction() != KeyEvent.ACTION_DOWN) return true;
+                if (event.getAction() != KeyEvent.ACTION_DOWN || event.getRepeatCount() > 0) return true;
                 if (System.currentTimeMillis() < blockedUntil[0]) return true;
-                if (code == KeyEvent.KEYCODE_DEL) { entered.setLength(0); dots.setText(""); return true; }
-                if (code >= KeyEvent.KEYCODE_0 && code <= KeyEvent.KEYCODE_9) {
-                    entered.append(code - KeyEvent.KEYCODE_0); dots.setText(new String(new char[entered.length()]).replace('\0', '•'));
-                    if (RemotePin.matches(entered.toString(), p.getString("salt", ""), p.getString("pinHash", ""))) { dismissSplash(); return true; }
+                if (code == KeyEvent.KEYCODE_DEL || code == KeyEvent.KEYCODE_BACK) { entered.setLength(0); dots.setText(""); return true; }
+                boolean direction = p.getBoolean("directionPattern", false);
+                String key = direction ? remoteDirection(code) : (code >= KeyEvent.KEYCODE_0 && code <= KeyEvent.KEYCODE_9 ? String.valueOf(code - KeyEvent.KEYCODE_0) : "");
+                if (!key.isEmpty()) {
+                    entered.append(key); dots.setText(new String(new char[entered.length()]).replace('\0', '•'));
+                    boolean match = direction ? RemotePin.matchesPattern(entered.toString(), p.getString("salt", ""), p.getString("pinHash", "")) : RemotePin.matches(entered.toString(), p.getString("salt", ""), p.getString("pinHash", ""));
+                    if (match) { dismissSplash(); return true; }
                     // A shorter PIN prefix may be valid, but unmatched inputs reset at the configured length.
                     if (entered.length() >= p.getInt("pinLength", 6)) {
-                        entered.setLength(0); attempts[0]++; dots.setText("PIN salah");
+                        entered.setLength(0); attempts[0]++; dots.setText(direction ? "Pola salah" : "PIN salah");
                         if (attempts[0] >= 5) { attempts[0] = 0; blockedUntil[0] = System.currentTimeMillis() + 30000; dots.setText("Coba lagi dalam 30 detik"); }
                     }
                 }
@@ -302,6 +305,19 @@ public final class OverlayService extends Service {
     }
 
     /** Lepas layar penuh (dipanggil kasir). */
+    static String remoteDirection(int code) {
+        switch (code) {
+            case KeyEvent.KEYCODE_DPAD_UP: return "U";
+            case KeyEvent.KEYCODE_DPAD_DOWN: return "D";
+            case KeyEvent.KEYCODE_DPAD_LEFT: return "L";
+            case KeyEvent.KEYCODE_DPAD_RIGHT: return "R";
+            case KeyEvent.KEYCODE_DPAD_CENTER:
+            case KeyEvent.KEYCODE_ENTER:
+            case KeyEvent.KEYCODE_NUMPAD_ENTER: return "C";
+            default: return "";
+        }
+    }
+
     static void dismissBlock() {
         MAIN.post(() -> {
             if (blockView == null) return;

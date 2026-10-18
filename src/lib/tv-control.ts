@@ -1,8 +1,8 @@
 import { tvIps } from "./tv-notify";
 
 const KEY = "rentoplay.tvControl";
-export type TvControlSettings = { mac: string; token: string; pin: string; welcomeTitle: string; welcomeMessage: string; splashOnWake: boolean };
-export const DEFAULT_TV_CONTROL: TvControlSettings = { mac: "", token: "", pin: "", welcomeTitle: "Selamat Datang", welcomeMessage: "", splashOnWake: false };
+export type TvControlSettings = { mac: string; token: string; pin: string; unlockPattern: string; welcomeTitle: string; welcomeMessage: string; splashOnWake: boolean };
+export const DEFAULT_TV_CONTROL: TvControlSettings = { mac: "", token: "", pin: "", unlockPattern: "", welcomeTitle: "Selamat Datang", welcomeMessage: "", splashOnWake: false };
 export type TvControlResult = { ok: boolean; error?: string; volume?: number; inputs?: { id: string; label: string }[] };
 declare global {
   interface Window { RenToPlayControl?: { request: (id: string, ip: string, json: string) => void; wake: (id: string, mac: string, ip: string) => void } }
@@ -17,10 +17,11 @@ export function saveTvControlSettings(id: string, value: TvControlSettings) {
   localStorage.setItem(KEY, JSON.stringify({ ...all, [id]: value }));
 }
 export function validRemotePin(pin: string): boolean { return /^[0-9]{4,6}$/.test(pin); }
+export function validRemotePattern(pattern: string): boolean { return /^[UDLRC]{4,6}$/.test(pattern); }
 export function tvControlDocument(settings: TvControlSettings, action: string, data: Record<string, unknown> = {}) {
-  if (action === "configure" && !validRemotePin(settings.pin)) throw new Error("PIN harus 4–6 angka (0–9).");
+  if (action === "configure" && !validRemotePattern(settings.unlockPattern)) throw new Error("Pola remote harus 4–6 tombol arah/OK.");
   return JSON.stringify({ ...data, action, token: settings.token, ...(action === "configure" ? {
-    pin: settings.pin, title: settings.welcomeTitle, message: settings.welcomeMessage, enabled: settings.splashOnWake,
+    unlockPattern: settings.unlockPattern, title: settings.welcomeTitle, message: settings.welcomeMessage, enabled: settings.splashOnWake,
   } : {}) });
 }
 export async function controlTv(id: string, action: string, data: Record<string, unknown> = {}): Promise<TvControlResult> {
