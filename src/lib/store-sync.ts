@@ -594,7 +594,7 @@ export function useStoreSync(options: {
             const current = outbox[key];
             if (current?.transaction === sentRecord.transaction) delete outbox[key];
           }
-          const full = await fetchAllStoreData(storeId, null);
+          const full = await fetchAllStoreData(storeId, null, true);
           if (full.error) throw new Error(full.error.message);
           applyRemote(prev => applyRecords(applyRecords(clearSyncedLists(prev), full.data), Object.values(outbox)));
           toast.warning('Pusat menolak kiriman yang sudah tertinggal. Data terbaru dimuat; periksa dan ulangi tindakan yang diperlukan.', { duration: 15000 });
