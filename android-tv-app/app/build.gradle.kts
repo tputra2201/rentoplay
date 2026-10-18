@@ -6,8 +6,8 @@ android {
         applicationId = "app.rentoplay.tv"
         minSdk = 23
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.3.0"
+        versionCode = 5
+        versionName = "1.3.1"
     }
     buildTypes { release { isMinifyEnabled = false } }
 }

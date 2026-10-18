@@ -50,8 +50,11 @@ public final class MainActivity extends Activity {
         power.setOnClickListener(v -> startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))); root.addView(power);
         Button pairing = new Button(this); pairing.setText("Tampilkan kode kontrol kasir");
         pairing.setOnClickListener(v -> new android.app.AlertDialog.Builder(this)
-            .setTitle("Kode kontrol kasir — rahasia")
+            .setTitle("Kode kontrol kasir (6 angka)")
             .setMessage(OverlayService.controlToken(this))
+            .setNeutralButton("Buat kode baru", (d, w) -> new android.app.AlertDialog.Builder(this)
+                .setTitle("Kode kontrol baru").setMessage(OverlayService.newControlToken(this) + "\n\nIsi ulang kode ini di Setup Station kasir.")
+                .setPositiveButton("Tutup", null).show())
             .setPositiveButton("Tutup", null).show()); root.addView(pairing);
         setContentView(root);
         if (Build.VERSION.SDK_INT >= 33) requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 1);
