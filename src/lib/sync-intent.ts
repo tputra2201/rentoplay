@@ -33,7 +33,8 @@ export function enqueueIntent(outbox: Record<string, Intent>, intents: Intent[])
   for (const pending of Object.values(outbox)) if (linked.has(pending.transaction)) pending.transaction = transaction;
   for (const intent of intents) {
     const key = recordKey(intent.kind, intent.entity_id);
-    outbox[key] = { ...intent, base: outbox[key]?.base ?? intent.base, transaction };
+    const previous = outbox[key];
+    outbox[key] = { ...intent, base: previous ? previous.base : intent.base, transaction };
   }
 }
 
