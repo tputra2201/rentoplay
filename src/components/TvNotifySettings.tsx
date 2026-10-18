@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Minus, Plus, X } from "lucide-react";
+import { Minus, Plus, X, ChevronDown, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Check, Undo2, RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,13 @@ import { Switch } from "@/components/ui/switch";
 import { useBilling } from "@/lib/billing-store";
 import { useStoreInfo } from "@/lib/store-info";
 import { TvControlPanel } from "@/components/TvControlPanel";
+import {
+  controlTv,
+  saveTvGlobalSettings,
+  tvGlobalSettings,
+  validRemotePattern,
+  type TvGlobalSettings,
+} from "@/lib/tv-control";
 import {
   DEFAULT_TV_CONFIG,
   saveTvConfig,
@@ -21,17 +28,30 @@ import {
   type TvNotifyConfig,
 } from "@/lib/tv-notify";
 
+const PATTERN_KEYS = [
+  { key: "U", label: "Atas", icon: ArrowUp },
+  { key: "D", label: "Bawah", icon: ArrowDown },
+  { key: "L", label: "Kiri", icon: ArrowLeft },
+  { key: "R", label: "Kanan", icon: ArrowRight },
+  { key: "C", label: "OK", icon: Check },
+] as const;
+const PATTERN_SYMBOL: Record<string, string> = { U: "↑", D: "↓", L: "←", R: "→", C: "OK" };
+
 /** IP layar per station + pesan & menit pengingat (disimpan di perangkat kasir ini). */
 export function TvNotifySettings() {
   const { stations } = useBilling();
   const { store } = useStoreInfo(true);
   const [ips, setIps] = useState<Record<string, string>>({});
   const [cfg, setCfg] = useState<TvNotifyConfig>(DEFAULT_TV_CONFIG);
+  const [global, setGlobal] = useState<TvGlobalSettings>(tvGlobalSettings());
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [sendingAll, setSendingAll] = useState(false);
   const [ready, setReady] = useState(false);
   const [modern, setModern] = useState(false);
   useEffect(() => {
     setIps(tvIps());
     setCfg(tvConfig());
+    setGlobal(tvGlobalSettings());
     const b = tvBridge();
     setReady(Boolean(b));
     setModern(Boolean(b?.scheduleJson));
@@ -40,6 +60,37 @@ export function TvNotifySettings() {
   const update = (next: TvNotifyConfig) => {
     setCfg(next);
     saveTvConfig(next);
+  };
+
+  const updateGlobal = (next: TvGlobalSettings) => {
+    setGlobal(next);
+    saveTvGlobalSettings(next);
+  };
+
+  const sendAll = async () => {
+    if (!validRemotePattern(global.unlockPattern)) {
+      toast.error("Pola remote harus 4–6 tombol arah/OK.");
+      return;
+    }
+    const targets = stations.filter((st) => ips[st.id]?.trim());
+    if (!targets.length) {
+      toast.error("Belum ada IP TV yang diisi.");
+      return;
+    }
+    setSendingAll(true);
+    let ok = 0;
+    let skipped = 0;
+    for (const st of targets) {
+      try {
+        await controlTv(st.id, "configure", { logo: store?.logo_url ?? "", store: store?.store_name ?? "RenToPlay" });
+        ok++;
+      } catch {
+        skipped++;
+      }
+    }
+    setSendingAll(false);
+    if (skipped) toast.error(`Tersimpan di ${ok} TV; ${skipped} gagal (periksa IP, kode kontrol, dan TV menyala).`);
+    else toast.success(`Pengaturan tersimpan di ${ok} TV.`);
   };
 
   const test = (id: string, name: string) => {
@@ -81,6 +132,43 @@ export function TvNotifySettings() {
 
   return (
     <div className="space-y-6 text-sm">
+      <div className="space-y-3">
+        <h2 className="text-xl font-semibold">Pengaturan Global TV</h2>
+        <p className="text-xs text-muted-foreground">
+          Berlaku untuk semua TV di store ini. Isi satu kali, lalu kirim ke semua TV.
+        </p>
+        <div className="space-y-2">
+          <Label>Pola Remote TV (4–6 tombol)</Label>
+          <div aria-label="Pola remote tersimpan" className="flex min-h-9 items-center gap-2 font-mono text-lg">
+            {global.unlockPattern ? global.unlockPattern.split("").map((key, i) => <span key={i}>{PATTERN_SYMBOL[key]}</span>) : <span className="text-sm text-muted-foreground">Belum diatur</span>}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {PATTERN_KEYS.map(({ key, label, icon: Icon }) => (
+              <Button key={key} type="button" size="icon" variant="outline" title={label} aria-label={`Pola ${label}`} disabled={global.unlockPattern.length >= 6} onClick={() => updateGlobal({ ...global, unlockPattern: global.unlockPattern + key })}><Icon className="size-4" /></Button>
+            ))}
+            <Button type="button" size="icon" variant="outline" title="Hapus tombol terakhir" aria-label="Hapus tombol terakhir" disabled={!global.unlockPattern} onClick={() => updateGlobal({ ...global, unlockPattern: global.unlockPattern.slice(0, -1) })}><Undo2 className="size-4" /></Button>
+            <Button type="button" size="icon" variant="outline" title="Kosongkan pola" aria-label="Kosongkan pola" disabled={!global.unlockPattern} onClick={() => updateGlobal({ ...global, unlockPattern: "" })}><RotateCcw className="size-4" /></Button>
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="tv-global-title">Judul sambutan</Label>
+            <Input id="tv-global-title" value={global.welcomeTitle} onChange={(e) => updateGlobal({ ...global, welcomeTitle: e.target.value })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="tv-global-message">Ucapan sambutan</Label>
+            <Input id="tv-global-message" value={global.welcomeMessage} onChange={(e) => updateGlobal({ ...global, welcomeMessage: e.target.value })} />
+          </div>
+        </div>
+        <label className="flex items-center justify-between rounded-lg bg-secondary/60 p-3">
+          <span>Splash saat TV dinyalakan</span>
+          <Switch checked={global.splashOnWake} onCheckedChange={(splashOnWake) => updateGlobal({ ...global, splashOnWake })} />
+        </label>
+        <Button disabled={!ready || sendingAll} onClick={() => void sendAll()}>
+          {sendingAll ? "Mengirim…" : "Kirim Pengaturan ke Semua TV"}
+        </Button>
+      </div>
+
       <div className="space-y-2">
         <h2 className="text-xl font-semibold">IP Layar Station</h2>
         <p className="text-xs text-muted-foreground">
@@ -89,32 +177,52 @@ export function TvNotifySettings() {
             : "Hanya bisa dari aplikasi Android kasir (bukan Chrome)."}
           {ready && !modern && " Pasang APK kasir terbaru agar pesan kustom & layar penuh aktif."}
         </p>
-        {stations.map((st) => (
-          <div key={st.id} className="space-y-3 border-b border-border pb-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="w-24 shrink-0 truncate font-medium">{st.name}</span>
-            <Input
-              inputMode="decimal"
-              placeholder="192.168.x.x"
-              value={ips[st.id] ?? ""}
-              onChange={(e) => setIps({ ...ips, [st.id]: e.target.value })}
-              onBlur={(e) => setTvIp(st.id, e.target.value)}
-              disabled={!ready}
-              className="h-8 w-40"
-            />
-            <Button size="sm" variant="outline" onClick={() => test(st.id, st.name)} disabled={!ready || !ips[st.id]}>
-              Tes
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => testBlock(st.id, st.name)} disabled={!modern || !ips[st.id]}>
-              Tes Layar Penuh
-            </Button>
-            <Button size="sm" onClick={() => release(st.id, st.name)} disabled={!modern || !ips[st.id]}>
-              Lepas Layar
-            </Button>
-          </div>
-          <TvControlPanel stationId={st.id} setup />
-          </div>
-        ))}
+        {stations.map((st) => {
+          const ip = ips[st.id]?.trim();
+          const open = openId === st.id;
+          return (
+            <div key={st.id} className="rounded-lg border border-border">
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 p-3 text-left"
+                aria-expanded={open}
+                onClick={() => setOpenId(open ? null : st.id)}
+              >
+                <ChevronDown className={`size-4 shrink-0 transition-transform ${open ? "" : "-rotate-90"}`} />
+                <span className="min-w-0 flex-1 truncate font-medium">{st.name}</span>
+                <span className={`shrink-0 text-xs ${ip ? "text-muted-foreground" : "font-medium text-destructive"}`}>
+                  {ip || "IP belum diisi"}
+                </span>
+              </button>
+              {open && (
+                <div className="space-y-3 border-t border-border p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Input
+                      inputMode="decimal"
+                      placeholder="192.168.x.x"
+                      value={ips[st.id] ?? ""}
+                      onChange={(e) => setIps({ ...ips, [st.id]: e.target.value })}
+                      onBlur={(e) => setTvIp(st.id, e.target.value)}
+                      disabled={!ready}
+                      className="h-8 w-40"
+                      aria-label={`IP TV ${st.name}`}
+                    />
+                    <Button size="sm" variant="outline" onClick={() => test(st.id, st.name)} disabled={!ready || !ip}>
+                      Tes
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => testBlock(st.id, st.name)} disabled={!modern || !ip}>
+                      Tes Layar Penuh
+                    </Button>
+                    <Button size="sm" onClick={() => release(st.id, st.name)} disabled={!modern || !ip}>
+                      Lepas Layar
+                    </Button>
+                  </div>
+                  <TvControlPanel stationId={st.id} setup />
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <div className="space-y-3">
