@@ -83,6 +83,8 @@ export const Route = createFileRoute("/_authenticated/laporan")({
         property: "og:description",
         content: "Rekap pendapatan harian rental dan penjualan kasir.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: LaporanPage,

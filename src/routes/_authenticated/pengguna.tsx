@@ -55,6 +55,8 @@ export const Route = createFileRoute("/_authenticated/pengguna")({
         content:
           "Kelola akun staf rental PlayStation per store dan atur hak akses tiap level lewat centang.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: PenggunaPage,

@@ -22,6 +22,8 @@ export const Route = createFileRoute("/_authenticated/akun")({
         property: "og:description",
         content: "Halaman ganti kata sandi untuk staf rental PlayStation.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: AkunPage,

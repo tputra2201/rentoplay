@@ -48,6 +48,8 @@ export const Route = createFileRoute("/_authenticated/tarif")({
         property: "og:description",
         content: "Atur tarif per jam tiap konsol dan harga menu kasir.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: TarifPage,
