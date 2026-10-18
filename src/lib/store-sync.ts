@@ -230,6 +230,8 @@ export function useStoreSync(options: {
   const loadedRef = useRef(false);
   const stateRef = useRef(state);
   const prevKeysRef = useRef<Set<string> | null>(null);
+  // Sudahkah data lokal dicocokkan dengan salinan pusat sejak aplikasi dibuka?
+  const initialCheckedRef = useRef(false);
   const blockedUntilRef = useRef(0);
   /** Sudah pernah mengambil seluruh data store pada sesi ini. */
   const bootstrappedRef = useRef(false);
@@ -437,7 +439,7 @@ export function useStoreSync(options: {
       writeJson(OUTBOX_KEY, outbox);
       setPending(Object.keys(outbox).length);
     }
-  }, [dirtySettings]);
+  }, [dirtySettings, applyRemote]);
 
   // Catat perubahan lokal langsung. Jangan beri kesempatan tarikan berkala
   // menimpa pengaturan yang baru diubah sebelum masuk antrean kirim.
