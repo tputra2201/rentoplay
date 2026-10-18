@@ -65,9 +65,16 @@ public final class OverlayService extends Service {
     static synchronized String controlToken(Context c) {
         SharedPreferences p = controlPrefs(c);
         String token = p.getString("token", "");
-        if (token.isEmpty()) { token = java.util.UUID.randomUUID().toString(); p.edit().putString("token", token).commit(); }
+        if (!token.matches("[0-9]{6}")) token = newControlToken(c);
         return token;
     }
+    static synchronized String newControlToken(Context c) {
+        String token = String.format(java.util.Locale.US, "%06d", new java.security.SecureRandom().nextInt(1000000));
+        controlPrefs(c).edit().putString("token", token).commit();
+        return token;
+    }
+    private static int tokenFailures = 0;
+    private static long tokenLockedUntil = 0;
 
     static void start(Context c) {
         Intent i = new Intent(c, OverlayService.class);
@@ -181,8 +188,15 @@ public final class OverlayService extends Service {
 
     private JSONObject control(JSONObject j) throws Exception {
         JSONObject result = new JSONObject();
-        if (!java.security.MessageDigest.isEqual(controlToken(this).getBytes(StandardCharsets.UTF_8), j.optString("token").getBytes(StandardCharsets.UTF_8))) {
-            result.put("ok", false); result.put("error", "Kode kontrol TV tidak cocok."); return result;
+        synchronized (OverlayService.class) {
+            if (System.currentTimeMillis() < tokenLockedUntil) {
+                result.put("ok", false); result.put("error", "Terlalu banyak kode salah. Coba lagi 1 menit."); return result;
+            }
+            if (!java.security.MessageDigest.isEqual(controlToken(this).getBytes(StandardCharsets.UTF_8), j.optString("token").trim().getBytes(StandardCharsets.UTF_8))) {
+                if (++tokenFailures >= 5) { tokenFailures = 0; tokenLockedUntil = System.currentTimeMillis() + 60000; }
+                result.put("ok", false); result.put("error", "Kode kontrol TV tidak cocok."); return result;
+            }
+            tokenFailures = 0;
         }
         String action = j.optString("action");
         if (action.equals("configure")) {
