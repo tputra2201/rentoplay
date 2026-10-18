@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS store_data_live_sync_idx ON public.store_data (store_id, updated_at, kind, entity_id) WHERE deleted = false;
