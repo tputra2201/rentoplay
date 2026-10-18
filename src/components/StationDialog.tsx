@@ -2,6 +2,7 @@ import { useUnitLabel } from "@/lib/billing-store";
 import { useEffect, useState } from "react";
 import { Ban, Play, Square, Plus, Trash2, Timer, Infinity as InfinityIcon, CheckCircle2, Wallet, AlertTriangle, Printer as PrinterIcon } from "lucide-react";
 import { OrderDraftDialog } from "@/components/OrderDraftDialog";
+import { TvControlPanel } from "@/components/TvControlPanel";
 import { stationModuleAccess } from "@/lib/station-module-access";
 import { VoidDialog } from "@/components/VoidDialog";
 import { PromoPicker } from "@/components/PromoPicker";
@@ -663,6 +664,7 @@ function StationDialogBody({
         </DialogHeader>
 
         <ShiftLockedNotice />
+        {businessProfile?.modules?.tvConnect !== false && allow("station.release") && <TvControlPanel stationId={station.id} />}
 
         {!session ? (
           <div className="space-y-5">
