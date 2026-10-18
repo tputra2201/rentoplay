@@ -426,6 +426,7 @@ export function useStoreSync(options: {
         deleted: boolean;
         updated_at: string;
       }[];
+      queueLocalChanges(stateRef.current, storeId);
       const records: SyncRecord[] = remote.map(row => ({ ...row, payload: row.payload ?? {} }));
       if (reconcileIntents(outboxRef.current, records, preserveConflicts)) {
         toast.warning('Perubahan bertabrakan dengan data pusat. Data terbaru dimuat; periksa lalu ulangi tindakan yang masih diperlukan.', { duration: 15000 });
@@ -463,6 +464,7 @@ export function useStoreSync(options: {
     storageLoaded,
     applyRemote,
     noteShadow,
+    queueLocalChanges,
   ]);
 
 
@@ -527,6 +529,9 @@ export function useStoreSync(options: {
       const { data, error: pullError } = await fetchAllStoreData(storeId, since);
       if (pullError) throw new Error(pullError.message);
       if (auditNow) lastAuditRef.current = Date.now();
+      // Include actions committed while the network read was in flight before
+      // applying its result, so the fresh read cannot erase a just-entered edit.
+      queueLocalChanges(stateRef.current, storeId);
 
       const remote = (data ?? []) as {
         kind: string;
