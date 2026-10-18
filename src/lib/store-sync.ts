@@ -230,6 +230,8 @@ export function useStoreSync(options: {
   const loadedRef = useRef(false);
   const stateRef = useRef(state);
   const prevKeysRef = useRef<Set<string> | null>(null);
+  // Sudahkah data lokal dicocokkan dengan salinan pusat sejak aplikasi dibuka?
+  const initialCheckedRef = useRef(false);
   const blockedUntilRef = useRef(0);
   /** Sudah pernah mengambil seluruh data store pada sesi ini. */
   const bootstrappedRef = useRef(false);
@@ -369,6 +371,27 @@ export function useStoreSync(options: {
     const outbox = outboxRef.current;
     let changed = false;
 
+    // Pemeriksaan pertama setelah aplikasi dibuka: perubahan asli selalu sudah
+    // masuk antrean saat dibuat. Baris yang berbeda dari salinan pusat tetapi
+    // TIDAK ada di antrean berarti data lokal basi (mis. penyimpanan iPhone
+    // gagal menulis data terbaru). Jangan kirim — kembalikan ke salinan pusat.
+    if (!initialCheckedRef.current) {
+      initialCheckedRef.current = true;
+      const restore: SyncRecord[] = [];
+      for (const [key, record] of current) {
+        const known = shadow[key];
+        if (known === undefined || outbox[key]) continue;
+        if (known === stableStringify(record.payload)) continue;
+        const payload = parseJson(known);
+        if (payload) restore.push({ ...record, payload, deleted: false });
+      }
+      prevKeysRef.current = new Set(current.keys());
+      if (restore.length) {
+        applyRemote((prev) => applyRecords(prev, restore));
+        return;
+      }
+    }
+
     const dirty = dirtySettings();
     for (const [key, record] of current) {
       const json = stableStringify(record.payload);
@@ -416,7 +439,7 @@ export function useStoreSync(options: {
       writeJson(OUTBOX_KEY, outbox);
       setPending(Object.keys(outbox).length);
     }
-  }, [dirtySettings]);
+  }, [dirtySettings, applyRemote]);
 
   // Catat perubahan lokal langsung. Jangan beri kesempatan tarikan berkala
   // menimpa pengaturan yang baru diubah sebelum masuk antrean kirim.
