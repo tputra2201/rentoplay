@@ -30,11 +30,20 @@ describe("TV splash control", () => {
     for (const pattern of ["0123", "UDC", "UDLRCCC", "UDLX"]) expect(validRemotePattern(pattern)).toBe(false);
   });
   test("pattern change and welcome settings reach TV only through configure", () => {
-    const settings = { ...DEFAULT_TV_CONTROL, token: "paired", unlockPattern: "UUDC", splashOnWake: true };
+    const settings = { ...DEFAULT_TV_CONTROL, token: "paired" };
     expect(JSON.parse(tvControlDocument(settings, "configure")).unlockPattern).toBe("UUDC");
     expect(JSON.parse(tvControlDocument(settings, "configure")).enabled).toBe(true);
     expect(JSON.parse(tvControlDocument(settings, "status")).unlockPattern).toBeUndefined();
     expect(JSON.parse(tvControlDocument(settings, "configure")).pin).toBeUndefined();
-    expect(() => tvControlDocument({ ...settings, unlockPattern: "0123" }, "configure")).toThrow();
+  });
+  test("configure uses the global pattern shared by all TVs", () => {
+    const originalWindow = globalThis.window, originalStorage = globalThis.localStorage;
+    try {
+      Object.assign(globalThis, {
+        window: {},
+        localStorage: { getItem: key => (key === "rentoplay.tvControlGlobal" ? JSON.stringify({ unlockPattern: "0123" }) : null) },
+      });
+      expect(() => tvControlDocument({ ...DEFAULT_TV_CONTROL, token: "paired", unlockPattern: "UUDC" }, "configure")).toThrow();
+    } finally { Object.assign(globalThis, { window: originalWindow, localStorage: originalStorage }); }
   });
 });
