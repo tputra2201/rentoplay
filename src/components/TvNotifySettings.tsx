@@ -201,7 +201,7 @@ export function TvNotifySettings() {
           </div>
         ))}
         <label className="flex items-center justify-between rounded-lg bg-secondary/60 p-3">
-          <span>Layar penuh 95% gelap + logo store, tetap tampil sampai dilepas kasir</span>
+          <span>Layar penuh hitam pekat + logo store, tetap tampil sampai dilepas kasir</span>
           <Switch checked={cfg.fullscreenEnd} onCheckedChange={(fullscreenEnd) => update({ ...cfg, fullscreenEnd })} />
         </label>
         <Button size="sm" variant="ghost" onClick={() => update(DEFAULT_TV_CONFIG)}>
