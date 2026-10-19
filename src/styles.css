@@ -170,11 +170,9 @@
   & > h2:first-child,
   & > h3:first-child,
   & > header:first-child {
-    margin: -1.25rem -1.25rem 1rem;
-    padding: 0.85rem 1.25rem;
-    background: var(--surface-head);
+    padding-bottom: 0.75rem;
+    margin-bottom: 1rem;
     border-bottom: 1px solid var(--color-border);
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   }
 }
 
