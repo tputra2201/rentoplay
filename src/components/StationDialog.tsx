@@ -1,6 +1,7 @@
 import { useUnitLabel } from "@/lib/billing-store";
 import { useEffect, useState } from "react";
 import { Ban, Play, Square, Plus, Trash2, Timer, Infinity as InfinityIcon, CheckCircle2, Wallet, AlertTriangle, Printer as PrinterIcon } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { OrderDraftDialog } from "@/components/OrderDraftDialog";
 import { TvControlPanel } from "@/components/TvControlPanel";
 import { stationModuleAccess } from "@/lib/station-module-access";
@@ -664,7 +665,18 @@ function StationDialogBody({
         </DialogHeader>
 
         <ShiftLockedNotice />
-        {businessProfile?.modules?.tvConnect !== false && allow("station.release") && <TvControlPanel stationId={station.id} />}
+        {businessProfile?.modules?.tvConnect !== false && allow("station.release") && (
+          <Accordion type="single" collapsible className="rounded-md border bg-surface-panel">
+            <AccordionItem value="setup-tv" className="border-0">
+              <AccordionTrigger className="px-3 py-2.5 text-sm font-semibold hover:no-underline">
+                Setup TV
+              </AccordionTrigger>
+              <AccordionContent className="px-3 pb-3">
+                <TvControlPanel stationId={station.id} />
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        )}
 
         {!session ? (
           <div className="space-y-5">
