@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Warna soft kelompok kartu TV lintas tema; rapikan Setup Station/Kafe/Store, IP TV dalam detail Daftar Station.
+
 - [x] Pola arah/OK di Setup Station, Release tetap terpisah dari billing, WOL subnet dengan tiga pengiriman; Cast wake tidak dipakai (tidak ada protokol generik terverifikasi). 12 tes Bun + JVM pola/WOL lulus, sumber Android terkompilasi API35, penyimpanan/kirim pola dan Release diuji akun aktif dengan bridge simulasi; tampilan desktop/mobile diperiksa. ZIP Kasir 1.6.0 dan Companion 1.4.0 siap; panduan standby PC/ADB di README Companion.
 
 - [x] Implementasi kontrol TV: splash saat SCREEN_ON/boot, PIN angka yang dapat diubah, release terpisah dari timer, volume, Home/HDMI perangkat, Wake-on-LAN dan standby dengan izin opsional. Kasir 1.5.0/Companion 1.3.0; 31 tes lulus, sumber Android dikompilasi terhadap API35, uji JVM PIN dan alarm lulus, pengaturan tersimpan/Release diuji pada akun aktif dengan simulasi bridge native.
