@@ -39,7 +39,7 @@ export function TvControlPanel({ stationId, setup = false }: { stationId: string
       const result = await controlTv(stationId, action, data);
       if (result.volume !== undefined || result.inputs) setStatus(previous => ({ ...previous, ...result }));
       if (action === "status") setStatusError("");
-      if (action === "input" && typeof data.inputId === "string") setSelectedInput(data.inputId);
+      if (action === "input" && typeof data["inputId"] === "string") setSelectedInput(data["inputId"]);
       if (action === "wake") toast.success("Sinyal nyala dikirim; periksa layar TV.");
       else if (action === "configure") toast.success("Pengaturan tersimpan di TV.");
       else if (action !== "status" && action !== "volume") toast.success("Perintah diterima TV.");
