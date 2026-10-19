@@ -2553,7 +2553,8 @@ export function BillingProvider({ children }: { children: ReactNode }) {
     const prev = stateRef.current;
     const next = typeof action === 'function' ? action(prev) : action;
     intentsRef.current.push(...captureIntent(prev, next));
-    saveIntentJournal(intentsRef.current);
+    try { saveIntentJournal(intentsRef.current, next.storeId); }
+    catch { toast.warning('Transaksi belum aman tersimpan di perangkat. Jangan tutup aplikasi; sambungkan internet atau kosongkan ruang penyimpanan.', { id: 'intent-storage-failed', duration: 15000 }); }
     setRawState(next);
   }, [setRawState]);
   useEffect(() => { intentsRef.current = loadIntentJournal(); }, []);
@@ -3333,7 +3334,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
   const bindStore = useCallback((id: string, keepLocal = false) => {
     if (stateRef.current.storeId !== id && !keepLocal) {
       intentsRef.current = [];
-      saveIntentJournal([]);
+      // Leave the previous store's durable journal intact for later recovery.
     }
     setRawState((prev) => {
       if (prev.storeId === id) return prev;

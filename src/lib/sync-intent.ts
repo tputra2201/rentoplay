@@ -1,5 +1,6 @@
 import { flattenSnapshot, recordKey, type SyncRecord } from './sync-records';
 import type { BillingSnapshot } from './billing-store';
+import { intentPersistence } from './intent-persistence';
 
 export type Intent = SyncRecord & { base: Record<string, unknown> | null; transaction: string };
 export type IntentQueue = { current: Intent[] };
@@ -57,13 +58,12 @@ export function intentStorageKey(suffix: string) {
   if (!id) { id = crypto.randomUUID(); sessionStorage.setItem('billing-sync-tab', id); }
   return `billing-intents-${id}-${suffix}`;
 }
-export function saveIntentJournal(rows: Intent[]) {
-  try { localStorage.setItem(intentStorageKey('journal'), JSON.stringify(rows)); }
-  catch { /* caller retains the in-memory queue */ }
+export function saveIntentJournal(rows: Intent[], storeId?: string | null) {
+  if (storeId) intentPersistence().saveJournal(storeId, rows);
 }
 export function loadIntentJournal(): Intent[] {
-  try { return JSON.parse(localStorage.getItem(intentStorageKey('journal')) ?? '[]'); }
-  catch { return []; }
+  // Unscoped old journals stay stored for review, never guessed into a store.
+  return [];
 }
 export function preserveConflicts(rows: Intent[]) {
   if (!rows.length) return;
