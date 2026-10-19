@@ -36,6 +36,13 @@ describe("TV splash control", () => {
     expect(JSON.parse(tvControlDocument(settings, "status")).unlockPattern).toBeUndefined();
     expect(JSON.parse(tvControlDocument(settings, "configure")).pin).toBeUndefined();
   });
+  test("splash video URL and mute flag ride along with configure only", () => {
+    const settings = { ...DEFAULT_TV_CONTROL, token: "paired" };
+    const configure = JSON.parse(tvControlDocument(settings, "configure"));
+    expect(configure.videoUrl).toBe("");
+    expect(configure.videoMuted).toBe(true);
+    expect(JSON.parse(tvControlDocument(settings, "status")).videoUrl).toBeUndefined();
+  });
   test("configure uses the global pattern shared by all TVs", () => {
     const originalWindow = globalThis.window, originalStorage = globalThis.localStorage;
     try {
