@@ -5,8 +5,8 @@ const GLOBAL_KEY = "rentoplay.tvControlGlobal";
 export type TvControlSettings = { mac: string; token: string; pin: string; unlockPattern: string; welcomeTitle: string; welcomeMessage: string; splashOnWake: boolean };
 export const DEFAULT_TV_CONTROL: TvControlSettings = { mac: "", token: "", pin: "", unlockPattern: "", welcomeTitle: "Selamat Datang", welcomeMessage: "", splashOnWake: false };
 /** Pengaturan yang berlaku sama untuk semua TV di store: pola remote, sambutan, splash. */
-export type TvGlobalSettings = { unlockPattern: string; welcomeTitle: string; welcomeMessage: string; splashOnWake: boolean };
-export const DEFAULT_TV_GLOBAL: TvGlobalSettings = { unlockPattern: "UUDC", welcomeTitle: "Selamat Datang", welcomeMessage: "", splashOnWake: true };
+export type TvGlobalSettings = { unlockPattern: string; welcomeTitle: string; welcomeMessage: string; splashOnWake: boolean; splashVideoUrl: string; splashVideoMuted: boolean };
+export const DEFAULT_TV_GLOBAL: TvGlobalSettings = { unlockPattern: "UUDC", welcomeTitle: "Selamat Datang", welcomeMessage: "", splashOnWake: true, splashVideoUrl: "", splashVideoMuted: true };
 export type TvControlResult = { ok: boolean; error?: string; volume?: number; inputs?: { id: string; label: string }[] };
 declare global {
   interface Window { RenToPlayControl?: { request: (id: string, ip: string, json: string) => void; wake: (id: string, mac: string, ip: string) => void } }
@@ -35,6 +35,7 @@ export function tvControlDocument(settings: TvControlSettings, action: string, d
   if (action === "configure" && !validRemotePattern(global.unlockPattern)) throw new Error("Pola remote harus 4–6 tombol arah/OK.");
   return JSON.stringify({ ...data, action, token: settings.token, ...(action === "configure" ? {
     unlockPattern: global.unlockPattern, title: global.welcomeTitle, message: global.welcomeMessage, enabled: global.splashOnWake,
+    videoUrl: global.splashVideoUrl, videoMuted: global.splashVideoMuted,
   } : {}) });
 }
 function sendControlRequest(bridge: NonNullable<Window["RenToPlayControl"]>, ip: string, document: string): Promise<TvControlResult> {

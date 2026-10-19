@@ -31,9 +31,14 @@ import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.VideoView;
+
+import java.io.File;
+import java.io.FileOutputStream;
 
 import org.json.JSONObject;
 import org.json.JSONArray;
@@ -203,11 +208,14 @@ public final class OverlayService extends Service {
             String pin = j.optString("unlockPattern");
             if (!RemotePin.validPattern(pin)) { result.put("ok", false); result.put("error", "Pola remote harus 4–6 tombol arah/OK. Perbarui pengaturan kasir."); return result; }
             String salt = java.util.UUID.randomUUID().toString();
+            String videoUrl = j.optString("videoUrl");
             boolean saved = controlPrefs(this).edit().putString("salt", salt).putString("pinHash", RemotePin.hash(pin, salt))
                 .putInt("pinLength", pin.length()).putBoolean("directionPattern", true)
                 .putString("title", j.optString("title")).putString("message", j.optString("message"))
                 .putString("logo", j.optString("logo")).putString("store", j.optString("store"))
+                .putString("videoUrl", videoUrl).putBoolean("videoMuted", j.optBoolean("videoMuted", true))
                 .putBoolean("enabled", j.optBoolean("enabled")).commit();
+            if (saved) syncSplashVideo(this, videoUrl);
             if (saved && !j.optBoolean("enabled")) dismissSplash();
             result.put("ok", saved); if (!saved) result.put("error", "Pengaturan TV gagal disimpan."); return result;
         }
@@ -266,11 +274,43 @@ public final class OverlayService extends Service {
         MAIN.post(task); return task.get(5, java.util.concurrent.TimeUnit.SECONDS);
     }
 
+    private static VideoView splashPlayer;
+
     static void dismissSplash() {
         MAIN.post(() -> { if (splashView == null) return;
+            try { if (splashPlayer != null) { splashPlayer.stopPlayback(); splashPlayer = null; } } catch (Exception ignored) { }
             try { ((WindowManager) splashView.getContext().getSystemService(WINDOW_SERVICE)).removeView(splashView); } catch (Exception ignored) { }
             splashView = null;
         });
+    }
+
+    /** Unduh video splash sekali ke memori TV; diputar dari berkas lokal agar lancar tanpa internet. */
+    private static void syncSplashVideo(Context ctx, String url) {
+        File target = new File(ctx.getFilesDir(), "splash.mp4");
+        if (url == null || url.isEmpty()) {
+            if (target.exists()) target.delete();
+            controlPrefs(ctx).edit().remove("videoCached").apply();
+            return;
+        }
+        if (url.equals(controlPrefs(ctx).getString("videoCached", "")) && target.exists()) return;
+        Context app = ctx.getApplicationContext();
+        new Thread(() -> {
+            try {
+                URLConnection c = new URL(url).openConnection();
+                c.setConnectTimeout(8000); c.setReadTimeout(30000);
+                File tmp = new File(app.getFilesDir(), "splash.tmp");
+                try (InputStream in = c.getInputStream(); FileOutputStream out = new FileOutputStream(tmp)) {
+                    byte[] buf = new byte[65536]; int r; long total = 0;
+                    while ((r = in.read(buf)) != -1) {
+                        total += r;
+                        if (total > 50L * 1024 * 1024) throw new java.io.IOException("Video melebihi 50 MB");
+                        out.write(buf, 0, r);
+                    }
+                }
+                if (target.exists()) target.delete();
+                if (tmp.renameTo(target)) controlPrefs(app).edit().putString("videoCached", url).apply();
+            } catch (Exception e) { android.util.Log.w("RenToPlayTV", "Unduh video splash gagal", e); }
+        }, "rtp-splash-video").start();
     }
 
     static void showWelcome(Context ctx) {
@@ -288,15 +328,34 @@ public final class OverlayService extends Service {
             }
         } catch (Exception ignored) { }
         final Bitmap image = decoded;
+        final File videoFile = new File(ctx.getFilesDir(), "splash.mp4");
+        final boolean useVideo = !p.getString("videoUrl", "").isEmpty() && videoFile.exists() && videoFile.length() > 0;
         MAIN.post(() -> {
             if (splashView != null || !Settings.canDrawOverlays(ctx)) return;
-            LinearLayout box = new LinearLayout(ctx); box.setOrientation(LinearLayout.VERTICAL); box.setGravity(Gravity.CENTER);
-            box.setBackgroundColor(Color.rgb(11, 15, 26)); box.setPadding(64, 48, 64, 48);
-            if (image != null) { ImageView iv = new ImageView(ctx); iv.setImageBitmap(image); iv.setScaleType(ImageView.ScaleType.FIT_CENTER); box.addView(iv, new LinearLayout.LayoutParams(360, 240)); }
-            TextView title = new TextView(ctx); title.setText(p.getString("title", "Selamat Datang")); title.setTextSize(44); title.setTextColor(Color.WHITE); title.setGravity(Gravity.CENTER); box.addView(title);
-            TextView store = new TextView(ctx); store.setText(p.getString("store", "")); store.setTextSize(28); store.setTextColor(Color.LTGRAY); store.setGravity(Gravity.CENTER); box.addView(store);
-            TextView message = new TextView(ctx); message.setText(p.getString("message", "")); message.setTextSize(26); message.setTextColor(Color.WHITE); message.setGravity(Gravity.CENTER); box.addView(message);
-            TextView dots = new TextView(ctx); dots.setTextSize(24); dots.setTextColor(Color.LTGRAY); dots.setPadding(0, 32, 0, 0); box.addView(dots);
+            FrameLayout box = new FrameLayout(ctx);
+            box.setBackgroundColor(Color.rgb(11, 15, 26));
+            if (useVideo) {
+                final VideoView vv = new VideoView(ctx);
+                vv.setVideoURI(Uri.fromFile(videoFile));
+                vv.setOnPreparedListener(mp -> {
+                    mp.setLooping(true);
+                    if (p.getBoolean("videoMuted", true)) mp.setVolume(0f, 0f);
+                    vv.start();
+                });
+                box.addView(vv, new FrameLayout.LayoutParams(-1, -1, Gravity.CENTER));
+                splashPlayer = vv;
+            } else {
+                LinearLayout content = new LinearLayout(ctx); content.setOrientation(LinearLayout.VERTICAL); content.setGravity(Gravity.CENTER);
+                content.setPadding(64, 48, 64, 48);
+                if (image != null) { ImageView iv = new ImageView(ctx); iv.setImageBitmap(image); iv.setScaleType(ImageView.ScaleType.FIT_CENTER); content.addView(iv, new LinearLayout.LayoutParams(360, 240)); }
+                TextView title = new TextView(ctx); title.setText(p.getString("title", "Selamat Datang")); title.setTextSize(44); title.setTextColor(Color.WHITE); title.setGravity(Gravity.CENTER); content.addView(title);
+                TextView store = new TextView(ctx); store.setText(p.getString("store", "")); store.setTextSize(28); store.setTextColor(Color.LTGRAY); store.setGravity(Gravity.CENTER); content.addView(store);
+                TextView message = new TextView(ctx); message.setText(p.getString("message", "")); message.setTextSize(26); message.setTextColor(Color.WHITE); message.setGravity(Gravity.CENTER); content.addView(message);
+                box.addView(content, new FrameLayout.LayoutParams(-1, -1));
+            }
+            TextView dots = new TextView(ctx); dots.setTextSize(24); dots.setTextColor(Color.LTGRAY);
+            FrameLayout.LayoutParams dotsLp = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+            dotsLp.bottomMargin = 40; box.addView(dots, dotsLp);
             StringBuilder entered = new StringBuilder(); int[] attempts = {0}; long[] blockedUntil = {0};
             box.setFocusableInTouchMode(true);
             box.setOnKeyListener((view, code, event) -> {

@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Minus, Plus, X, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Check, Undo2, RotateCcw } from "lucide-react";
+import { Minus, Plus, X, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Check, Undo2, RotateCcw, Upload, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/integrations/supabase/client";
 import { useBilling } from "@/lib/billing-store";
 import { useStoreInfo } from "@/lib/store-info";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -42,6 +43,8 @@ export function TvNotifySettings() {
   const [cfg, setCfg] = useState<TvNotifyConfig>(DEFAULT_TV_CONFIG);
   const [global, setGlobal] = useState<TvGlobalSettings>(tvGlobalSettings());
   const [sendingAll, setSendingAll] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const videoInput = useRef<HTMLInputElement>(null);
   const [ready, setReady] = useState(false);
   useEffect(() => {
     setCfg(tvConfig());
@@ -58,6 +61,25 @@ export function TvNotifySettings() {
   const updateGlobal = (next: TvGlobalSettings) => {
     setGlobal(next);
     saveTvGlobalSettings(next);
+  };
+
+  const uploadVideo = async (file: File) => {
+    if (!store?.id) { toast.error("Data store belum dimuat."); return; }
+    if (file.type !== "video/mp4" && !file.name.toLowerCase().endsWith(".mp4")) { toast.error("Gunakan berkas video MP4."); return; }
+    if (file.size > 50 * 1024 * 1024) { toast.error("Ukuran video maksimal 50 MB."); return; }
+    setUploadingVideo(true);
+    const { error } = await supabase.storage.from("tv-splash").upload(`${store.id}/splash.mp4`, file, { upsert: true, contentType: "video/mp4" });
+    setUploadingVideo(false);
+    if (error) { toast.error("Gagal mengunggah video. Coba lagi."); return; }
+    const url = `${window.location.origin}/api/public/tv-splash?store=${store.id}&v=${Date.now()}`;
+    updateGlobal({ ...global, splashVideoUrl: url });
+    toast.success("Video splash tersimpan. Kirim pengaturan ke TV agar video terpasang.");
+  };
+
+  const removeVideo = async () => {
+    if (store?.id) await supabase.storage.from("tv-splash").remove([`${store.id}/splash.mp4`]);
+    updateGlobal({ ...global, splashVideoUrl: "" });
+    toast.success("Video splash dihapus. Kirim pengaturan ke TV untuk membersihkan memori TV.");
   };
 
   const sendAll = async () => {
@@ -123,6 +145,33 @@ export function TvNotifySettings() {
           <span>Splash saat TV dinyalakan</span>
           <Switch checked={global.splashOnWake} onCheckedChange={(splashOnWake) => updateGlobal({ ...global, splashOnWake })} />
         </label>
+        <div className="space-y-3 rounded-lg border border-border p-3">
+          <div className="space-y-1">
+            <Label>Video Splash (MP4)</Label>
+            <p className="text-xs text-muted-foreground">
+              Video intro logo berputar terus-menerus sebagai splash TV. Video diunduh satu kali lalu tersimpan di memori TV agar lancar tanpa internet. Maksimal 50 MB.
+            </p>
+          </div>
+          <input ref={videoInput} type="file" accept="video/mp4,.mp4" className="hidden" aria-label="Pilih video splash MP4"
+            onChange={(e) => { const file = e.target.files?.[0]; if (file) void uploadVideo(file); e.target.value = ""; }} />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" size="sm" variant="outline" disabled={uploadingVideo} onClick={() => videoInput.current?.click()}>
+              <Upload className="size-4" /> {uploadingVideo ? "Mengunggah…" : global.splashVideoUrl ? "Ganti Video" : "Unggah Video"}
+            </Button>
+            {global.splashVideoUrl && (
+              <Button type="button" size="sm" variant="ghost" onClick={() => void removeVideo()}>
+                <Trash2 className="size-4" /> Hapus Video
+              </Button>
+            )}
+            {global.splashVideoUrl && <span className="text-xs text-muted-foreground">Video aktif</span>}
+          </div>
+          {global.splashVideoUrl && (
+            <label className="flex items-center justify-between rounded-lg bg-secondary/60 p-3">
+              <span>Senyapkan suara video (mute)</span>
+              <Switch checked={global.splashVideoMuted} onCheckedChange={(splashVideoMuted) => updateGlobal({ ...global, splashVideoMuted })} />
+            </label>
+          )}
+        </div>
         <Button disabled={!ready || sendingAll} onClick={() => void sendAll()}>
           {sendingAll ? "Mengirim…" : "Kirim Pengaturan ke Semua TV"}
         </Button>

@@ -29,6 +29,13 @@
       "when": 1792335847341,
       "tag": "0003_store_data_live_rows_index",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792386968700,
+      "tag": "0004_tv_splash_bucket_policies",
+      "breakpoints": true
     }
   ]
 }

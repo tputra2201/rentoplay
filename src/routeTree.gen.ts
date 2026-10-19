@@ -36,6 +36,7 @@ import { Route as AuthenticatedTemaRouteImport } from './routes/_authenticated/t
 import { Route as ApiPublicClientIpRouteImport } from './routes/api/public/client-ip'
 import { Route as ApiPublicManifestRouteImport } from './routes/api/public/manifest'
 import { Route as ApiPublicStoreRegistryRouteImport } from './routes/api/public/store-registry'
+import { Route as ApiPublicTvSplashRouteImport } from './routes/api/public/tv-splash'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
@@ -174,6 +175,11 @@ const ApiPublicStoreRegistryRoute = ApiPublicStoreRegistryRouteImport.update({
   path: '/api/public/store-registry',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicTvSplashRoute = ApiPublicTvSplashRouteImport.update({
+  id: '/api/public/tv-splash',
+  path: '/api/public/tv-splash',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   id: '/lovable/email/auth/preview',
   path: '/lovable/email/auth/preview',
@@ -218,6 +224,7 @@ export interface FileRoutesByFullPath {
   '/api/public/client-ip': typeof ApiPublicClientIpRoute
   '/api/public/manifest': typeof ApiPublicManifestRoute
   '/api/public/store-registry': typeof ApiPublicStoreRegistryRoute
+  '/api/public/tv-splash': typeof ApiPublicTvSplashRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -249,6 +256,7 @@ export interface FileRoutesByTo {
   '/api/public/client-ip': typeof ApiPublicClientIpRoute
   '/api/public/manifest': typeof ApiPublicManifestRoute
   '/api/public/store-registry': typeof ApiPublicStoreRegistryRoute
+  '/api/public/tv-splash': typeof ApiPublicTvSplashRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -282,6 +290,7 @@ export interface FileRoutesById {
   '/api/public/client-ip': typeof ApiPublicClientIpRoute
   '/api/public/manifest': typeof ApiPublicManifestRoute
   '/api/public/store-registry': typeof ApiPublicStoreRegistryRoute
+  '/api/public/tv-splash': typeof ApiPublicTvSplashRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -315,6 +324,7 @@ export interface FileRouteTypes {
     | '/api/public/client-ip'
     | '/api/public/manifest'
     | '/api/public/store-registry'
+    | '/api/public/tv-splash'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
@@ -346,6 +356,7 @@ export interface FileRouteTypes {
     | '/api/public/client-ip'
     | '/api/public/manifest'
     | '/api/public/store-registry'
+    | '/api/public/tv-splash'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
@@ -378,6 +389,7 @@ export interface FileRouteTypes {
     | '/api/public/client-ip'
     | '/api/public/manifest'
     | '/api/public/store-registry'
+    | '/api/public/tv-splash'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
@@ -391,6 +403,7 @@ export interface RootRouteChildren {
   ApiPublicClientIpRoute: typeof ApiPublicClientIpRoute
   ApiPublicManifestRoute: typeof ApiPublicManifestRoute
   ApiPublicStoreRegistryRoute: typeof ApiPublicStoreRegistryRoute
+  ApiPublicTvSplashRoute: typeof ApiPublicTvSplashRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
@@ -587,6 +600,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicStoreRegistryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/tv-splash': {
+      id: '/api/public/tv-splash'
+      path: '/api/public/tv-splash'
+      fullPath: '/api/public/tv-splash'
+      preLoaderRoute: typeof ApiPublicTvSplashRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/auth/preview': {
       id: '/lovable/email/auth/preview'
       path: '/lovable/email/auth/preview'
@@ -668,6 +688,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicClientIpRoute: ApiPublicClientIpRoute,
   ApiPublicManifestRoute: ApiPublicManifestRoute,
   ApiPublicStoreRegistryRoute: ApiPublicStoreRegistryRoute,
+  ApiPublicTvSplashRoute: ApiPublicTvSplashRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
