@@ -42,12 +42,10 @@ export function StationCard({
   station,
   now,
   onClick,
-  tone = "blue",
 }: {
   station: Station;
   now: number;
   onClick: () => void;
-  tone?: StationTone;
 }) {
   const {
     bookings,
