@@ -157,7 +157,7 @@ function Dashboard() {
             className="min-w-0"
           >
             <StationCard
-              tone={tones[station.id]}
+              tone={tones[station.id] ?? "blue"}
               station={station}
               now={now}
               onClick={() => setSelectedId(station.id)}

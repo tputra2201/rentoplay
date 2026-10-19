@@ -8,6 +8,6 @@ export function stationTones(stations: { id: string; name: string }[]): Record<s
   return Object.fromEntries(stations.map((s, i) => {
     const group = stationGroup(s.name);
     const index = group ? groups.indexOf(group) : Math.floor(i / 6);
-    return [s.id, tones[index % tones.length]];
+    return [s.id, tones[index % tones.length] ?? "blue"];
   }));
 }
