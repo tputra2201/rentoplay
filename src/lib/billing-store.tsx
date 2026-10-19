@@ -35,7 +35,7 @@ import {
 } from "./report-range";
 import { ALARM_SOUNDS, type AlarmSound } from "./alarm";
 import { SETTINGS_KEYS } from "./sync-records";
-import { captureIntent, saveIntentJournal, loadIntentJournal, type IntentQueue } from "./sync-intent";
+import { captureIntent, saveIntentJournal, type IntentQueue } from "./sync-intent";
 
 /**
  * Waktu batas penutupan otomatis satu hari usaha: tepat pada jam tutup.
@@ -2557,7 +2557,6 @@ export function BillingProvider({ children }: { children: ReactNode }) {
     catch { toast.warning('Transaksi belum aman tersimpan di perangkat. Jangan tutup aplikasi; sambungkan internet atau kosongkan ruang penyimpanan.', { id: 'intent-storage-failed', duration: 15000 }); }
     setRawState(next);
   }, [setRawState]);
-  useEffect(() => { intentsRef.current = loadIntentJournal(); }, []);
   const [now, setNow] = useState(() => Date.now());
   const [hydrated, setHydrated] = useState(false);
   // True hanya bila data lokal memang terbaca dari perangkat. Kalau false,
