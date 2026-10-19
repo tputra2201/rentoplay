@@ -145,6 +145,33 @@ export function TvNotifySettings() {
           <span>Splash saat TV dinyalakan</span>
           <Switch checked={global.splashOnWake} onCheckedChange={(splashOnWake) => updateGlobal({ ...global, splashOnWake })} />
         </label>
+        <div className="space-y-3 rounded-lg border border-border p-3">
+          <div className="space-y-1">
+            <Label>Video Splash (MP4)</Label>
+            <p className="text-xs text-muted-foreground">
+              Video intro logo berputar terus-menerus sebagai splash TV. Video diunduh satu kali lalu tersimpan di memori TV agar lancar tanpa internet. Maksimal 50 MB.
+            </p>
+          </div>
+          <input ref={videoInput} type="file" accept="video/mp4,.mp4" className="hidden" aria-label="Pilih video splash MP4"
+            onChange={(e) => { const file = e.target.files?.[0]; if (file) void uploadVideo(file); e.target.value = ""; }} />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" size="sm" variant="outline" disabled={uploadingVideo} onClick={() => videoInput.current?.click()}>
+              <Upload className="size-4" /> {uploadingVideo ? "Mengunggah…" : global.splashVideoUrl ? "Ganti Video" : "Unggah Video"}
+            </Button>
+            {global.splashVideoUrl && (
+              <Button type="button" size="sm" variant="ghost" onClick={() => void removeVideo()}>
+                <Trash2 className="size-4" /> Hapus Video
+              </Button>
+            )}
+            {global.splashVideoUrl && <span className="text-xs text-muted-foreground">Video aktif</span>}
+          </div>
+          {global.splashVideoUrl && (
+            <label className="flex items-center justify-between rounded-lg bg-secondary/60 p-3">
+              <span>Senyapkan suara video (mute)</span>
+              <Switch checked={global.splashVideoMuted} onCheckedChange={(splashVideoMuted) => updateGlobal({ ...global, splashVideoMuted })} />
+            </label>
+          )}
+        </div>
         <Button disabled={!ready || sendingAll} onClick={() => void sendAll()}>
           {sendingAll ? "Mengirim…" : "Kirim Pengaturan ke Semua TV"}
         </Button>
