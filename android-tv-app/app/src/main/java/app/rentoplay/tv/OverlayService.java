@@ -31,9 +31,14 @@ import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.VideoView;
+
+import java.io.File;
+import java.io.FileOutputStream;
 
 import org.json.JSONObject;
 import org.json.JSONArray;
@@ -203,11 +208,14 @@ public final class OverlayService extends Service {
             String pin = j.optString("unlockPattern");
             if (!RemotePin.validPattern(pin)) { result.put("ok", false); result.put("error", "Pola remote harus 4–6 tombol arah/OK. Perbarui pengaturan kasir."); return result; }
             String salt = java.util.UUID.randomUUID().toString();
+            String videoUrl = j.optString("videoUrl");
             boolean saved = controlPrefs(this).edit().putString("salt", salt).putString("pinHash", RemotePin.hash(pin, salt))
                 .putInt("pinLength", pin.length()).putBoolean("directionPattern", true)
                 .putString("title", j.optString("title")).putString("message", j.optString("message"))
                 .putString("logo", j.optString("logo")).putString("store", j.optString("store"))
+                .putString("videoUrl", videoUrl).putBoolean("videoMuted", j.optBoolean("videoMuted", true))
                 .putBoolean("enabled", j.optBoolean("enabled")).commit();
+            if (saved) syncSplashVideo(this, videoUrl);
             if (saved && !j.optBoolean("enabled")) dismissSplash();
             result.put("ok", saved); if (!saved) result.put("error", "Pengaturan TV gagal disimpan."); return result;
         }
