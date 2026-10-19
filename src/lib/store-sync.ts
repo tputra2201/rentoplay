@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { BillingSnapshot } from "./billing-store";
-import { enqueueIntent, reconcileIntents, canonical, intentStorageKey, saveIntentJournal, preserveConflicts, type Intent, type IntentQueue } from "./sync-intent";
+import { reconcileIntents, canonical, preserveConflicts, type Intent, type IntentQueue } from "./sync-intent";
 import { toast } from "sonner";
 import { intentPersistence } from './intent-persistence';
 import {
@@ -142,6 +142,21 @@ type Shadow = Record<string, string>;
 type Pending = Intent;
 type Outbox = Record<string, Pending>;
 
+const pendingRows = (storeId: string) => intentPersistence().queues(storeId).flatMap(queue => Object.values(queue.outbox));
+const persistQueues = (storeId: string) => {
+  for (const queue of intentPersistence().queues(storeId)) intentPersistence().persist(queue);
+};
+const reconcileQueues = (storeId: string, records: SyncRecord[]) => {
+  let conflicts = 0;
+  for (const queue of intentPersistence().queues(storeId)) {
+    const next = structuredClone(queue.outbox);
+    conflicts += reconcileIntents(next, records, preserveConflicts);
+    intentPersistence().persist({ ...queue, outbox: next });
+    queue.outbox = next;
+  }
+  return conflicts;
+};
+
 function readJson<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
   try {
@@ -219,7 +234,6 @@ export function useStoreSync(options: {
   const [bootAttempt, setBootAttempt] = useState(0);
 
 
-  const outboxKeyRef = useRef<string>("");
   const shadowRef = useRef<Shadow>({});
   const outboxRef = useRef<Outbox>({});
   const busyRef = useRef(false);
@@ -247,7 +261,6 @@ export function useStoreSync(options: {
   // Muat antrean & bayangan dari perangkat.
   useEffect(() => {
     shadowRef.current = readJson<Shadow>(SHADOW_KEY, {});
-    outboxKeyRef.current = intentStorageKey('outbox');
     // Old unscoped queues have no provable store identity. Keep them untouched.
     const hasLegacy = Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i))
       .some(key => {
@@ -331,7 +344,6 @@ export function useStoreSync(options: {
           // Data lokal milik store lain (atau data bawaan yang belum bertanda
           // store): buang jejak sinkronisasi lama supaya tidak ikut terkirim.
           localStorage.removeItem(SHADOW_KEY);
-          localStorage.removeItem(outboxKeyRef.current);
           localStorage.removeItem(SINCE_KEY);
           // Tandai bahwa data lokal baru saja dikosongkan, jadi isi pusat aman
           // dipakai sebagai satu-satunya sumber saat pengambilan pertama.
@@ -383,7 +395,7 @@ export function useStoreSync(options: {
     }
     intentPersistence().drainOwn(activeStoreId, normalized);
     intents.current.splice(0, queued.length);
-    const own = intentPersistence().queues(activeStoreId).find(queue => queue.owner === intentPersistenceOwner(activeStoreId));
+    const own = intentPersistence().ownQueue(activeStoreId);
     if (own) outboxRef.current = own.outbox;
     setPending(pendingRows(activeStoreId).length);
   }, [intents]);
@@ -416,7 +428,6 @@ export function useStoreSync(options: {
       Boolean(localStorage.getItem(SINCE_KEY));
     if (hasSyncHistory && !storageLoaded) {
       localStorage.removeItem(SHADOW_KEY);
-      localStorage.removeItem(outboxKeyRef.current);
       localStorage.removeItem(SINCE_KEY);
       localStorage.setItem(FRESH_KEY, storeId);
       shadowRef.current = {};
@@ -536,7 +547,6 @@ export function useStoreSync(options: {
       if (!currentStoreId) throw new Error("Akun belum terhubung ke store.");
       if (currentStoreId !== storeId) {
         localStorage.removeItem(SHADOW_KEY);
-        localStorage.removeItem(outboxKeyRef.current);
         localStorage.removeItem(SINCE_KEY);
         localStorage.removeItem(BASELINE_KEY);
         localStorage.setItem(STORE_KEY, currentStoreId);
@@ -610,7 +620,7 @@ export function useStoreSync(options: {
 
       // 2. Kirim perubahan lokal yang tersisa.
       for (const queue of intentPersistence().queues(storeId)) {
-      const outbox = queue.outbox;
+      let outbox = queue.outbox;
       const keys = Object.keys(outbox);
       if (keys.length) {
         const sentByKey = new Map(
@@ -624,6 +634,9 @@ export function useStoreSync(options: {
           _store_id: storeId,
           _records: rows as never,
         });
+        // Journal draining can replace the outbox while the request is in flight.
+        // Acknowledge against the latest queue, never a detached older object.
+        outbox = queue.outbox;
         if (pushError && pushError.code !== 'P0001') throw pushError;
         const response = pushError
           ? { accepted: false, records: [] }

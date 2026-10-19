@@ -99,6 +99,7 @@ export class IntentPersistence {
   }
 
   queues(storeId: string) { return [...this.shards.values()].filter(shard => shard.storeId === storeId); }
+  ownQueue(storeId: string) { return this.own.get(storeId); }
 
   saveJournal(storeId: string, rows: Intent[]) {
     const shard = this.own.get(storeId) ?? { version: 2 as const, storeId, owner: this.owner, journal: [], outbox: {} };
