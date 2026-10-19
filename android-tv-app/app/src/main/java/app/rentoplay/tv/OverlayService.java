@@ -274,11 +274,43 @@ public final class OverlayService extends Service {
         MAIN.post(task); return task.get(5, java.util.concurrent.TimeUnit.SECONDS);
     }
 
+    private static VideoView splashPlayer;
+
     static void dismissSplash() {
         MAIN.post(() -> { if (splashView == null) return;
+            try { if (splashPlayer != null) { splashPlayer.stopPlayback(); splashPlayer = null; } } catch (Exception ignored) { }
             try { ((WindowManager) splashView.getContext().getSystemService(WINDOW_SERVICE)).removeView(splashView); } catch (Exception ignored) { }
             splashView = null;
         });
+    }
+
+    /** Unduh video splash sekali ke memori TV; diputar dari berkas lokal agar lancar tanpa internet. */
+    private static void syncSplashVideo(Context ctx, String url) {
+        File target = new File(ctx.getFilesDir(), "splash.mp4");
+        if (url == null || url.isEmpty()) {
+            if (target.exists()) target.delete();
+            controlPrefs(ctx).edit().remove("videoCached").apply();
+            return;
+        }
+        if (url.equals(controlPrefs(ctx).getString("videoCached", "")) && target.exists()) return;
+        Context app = ctx.getApplicationContext();
+        new Thread(() -> {
+            try {
+                URLConnection c = new URL(url).openConnection();
+                c.setConnectTimeout(8000); c.setReadTimeout(30000);
+                File tmp = new File(app.getFilesDir(), "splash.tmp");
+                try (InputStream in = c.getInputStream(); FileOutputStream out = new FileOutputStream(tmp)) {
+                    byte[] buf = new byte[65536]; int r; long total = 0;
+                    while ((r = in.read(buf)) != -1) {
+                        total += r;
+                        if (total > 50L * 1024 * 1024) throw new java.io.IOException("Video melebihi 50 MB");
+                        out.write(buf, 0, r);
+                    }
+                }
+                if (target.exists()) target.delete();
+                if (tmp.renameTo(target)) controlPrefs(app).edit().putString("videoCached", url).apply();
+            } catch (Exception e) { android.util.Log.w("RenToPlayTV", "Unduh video splash gagal", e); }
+        }, "rtp-splash-video").start();
     }
 
     static void showWelcome(Context ctx) {
