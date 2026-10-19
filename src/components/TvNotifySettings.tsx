@@ -43,6 +43,8 @@ export function TvNotifySettings() {
   const [cfg, setCfg] = useState<TvNotifyConfig>(DEFAULT_TV_CONFIG);
   const [global, setGlobal] = useState<TvGlobalSettings>(tvGlobalSettings());
   const [sendingAll, setSendingAll] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const videoInput = useRef<HTMLInputElement>(null);
   const [ready, setReady] = useState(false);
   useEffect(() => {
     setCfg(tvConfig());
@@ -59,6 +61,25 @@ export function TvNotifySettings() {
   const updateGlobal = (next: TvGlobalSettings) => {
     setGlobal(next);
     saveTvGlobalSettings(next);
+  };
+
+  const uploadVideo = async (file: File) => {
+    if (!store?.id) { toast.error("Data store belum dimuat."); return; }
+    if (file.type !== "video/mp4" && !file.name.toLowerCase().endsWith(".mp4")) { toast.error("Gunakan berkas video MP4."); return; }
+    if (file.size > 50 * 1024 * 1024) { toast.error("Ukuran video maksimal 50 MB."); return; }
+    setUploadingVideo(true);
+    const { error } = await supabase.storage.from("tv-splash").upload(`${store.id}/splash.mp4`, file, { upsert: true, contentType: "video/mp4" });
+    setUploadingVideo(false);
+    if (error) { toast.error("Gagal mengunggah video. Coba lagi."); return; }
+    const url = `${window.location.origin}/api/public/tv-splash?store=${store.id}&v=${Date.now()}`;
+    updateGlobal({ ...global, splashVideoUrl: url });
+    toast.success("Video splash tersimpan. Kirim pengaturan ke TV agar video terpasang.");
+  };
+
+  const removeVideo = async () => {
+    if (store?.id) await supabase.storage.from("tv-splash").remove([`${store.id}/splash.mp4`]);
+    updateGlobal({ ...global, splashVideoUrl: "" });
+    toast.success("Video splash dihapus. Kirim pengaturan ke TV untuk membersihkan memori TV.");
   };
 
   const sendAll = async () => {
