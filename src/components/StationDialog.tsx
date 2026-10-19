@@ -1,6 +1,7 @@
 import { useUnitLabel } from "@/lib/billing-store";
 import { useEffect, useState } from "react";
 import { Ban, Play, Square, Plus, Trash2, Timer, Infinity as InfinityIcon, CheckCircle2, Wallet, AlertTriangle, Printer as PrinterIcon } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { OrderDraftDialog } from "@/components/OrderDraftDialog";
 import { TvControlPanel } from "@/components/TvControlPanel";
 import { stationModuleAccess } from "@/lib/station-module-access";
