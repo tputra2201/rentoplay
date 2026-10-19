@@ -17,7 +17,9 @@ import {
   Users,
   ImageUp,
   Info,
+  History,
 } from "lucide-react";
+import { CHANGELOG } from "@/lib/changelog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
