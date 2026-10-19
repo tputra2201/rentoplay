@@ -328,15 +328,34 @@ public final class OverlayService extends Service {
             }
         } catch (Exception ignored) { }
         final Bitmap image = decoded;
+        final File videoFile = new File(ctx.getFilesDir(), "splash.mp4");
+        final boolean useVideo = !p.getString("videoUrl", "").isEmpty() && videoFile.exists() && videoFile.length() > 0;
         MAIN.post(() -> {
             if (splashView != null || !Settings.canDrawOverlays(ctx)) return;
-            LinearLayout box = new LinearLayout(ctx); box.setOrientation(LinearLayout.VERTICAL); box.setGravity(Gravity.CENTER);
-            box.setBackgroundColor(Color.rgb(11, 15, 26)); box.setPadding(64, 48, 64, 48);
-            if (image != null) { ImageView iv = new ImageView(ctx); iv.setImageBitmap(image); iv.setScaleType(ImageView.ScaleType.FIT_CENTER); box.addView(iv, new LinearLayout.LayoutParams(360, 240)); }
-            TextView title = new TextView(ctx); title.setText(p.getString("title", "Selamat Datang")); title.setTextSize(44); title.setTextColor(Color.WHITE); title.setGravity(Gravity.CENTER); box.addView(title);
-            TextView store = new TextView(ctx); store.setText(p.getString("store", "")); store.setTextSize(28); store.setTextColor(Color.LTGRAY); store.setGravity(Gravity.CENTER); box.addView(store);
-            TextView message = new TextView(ctx); message.setText(p.getString("message", "")); message.setTextSize(26); message.setTextColor(Color.WHITE); message.setGravity(Gravity.CENTER); box.addView(message);
-            TextView dots = new TextView(ctx); dots.setTextSize(24); dots.setTextColor(Color.LTGRAY); dots.setPadding(0, 32, 0, 0); box.addView(dots);
+            FrameLayout box = new FrameLayout(ctx);
+            box.setBackgroundColor(Color.rgb(11, 15, 26));
+            if (useVideo) {
+                final VideoView vv = new VideoView(ctx);
+                vv.setVideoURI(Uri.fromFile(videoFile));
+                vv.setOnPreparedListener(mp -> {
+                    mp.setLooping(true);
+                    if (p.getBoolean("videoMuted", true)) mp.setVolume(0f, 0f);
+                    vv.start();
+                });
+                box.addView(vv, new FrameLayout.LayoutParams(-1, -1, Gravity.CENTER));
+                splashPlayer = vv;
+            } else {
+                LinearLayout content = new LinearLayout(ctx); content.setOrientation(LinearLayout.VERTICAL); content.setGravity(Gravity.CENTER);
+                content.setPadding(64, 48, 64, 48);
+                if (image != null) { ImageView iv = new ImageView(ctx); iv.setImageBitmap(image); iv.setScaleType(ImageView.ScaleType.FIT_CENTER); content.addView(iv, new LinearLayout.LayoutParams(360, 240)); }
+                TextView title = new TextView(ctx); title.setText(p.getString("title", "Selamat Datang")); title.setTextSize(44); title.setTextColor(Color.WHITE); title.setGravity(Gravity.CENTER); content.addView(title);
+                TextView store = new TextView(ctx); store.setText(p.getString("store", "")); store.setTextSize(28); store.setTextColor(Color.LTGRAY); store.setGravity(Gravity.CENTER); content.addView(store);
+                TextView message = new TextView(ctx); message.setText(p.getString("message", "")); message.setTextSize(26); message.setTextColor(Color.WHITE); message.setGravity(Gravity.CENTER); content.addView(message);
+                box.addView(content, new FrameLayout.LayoutParams(-1, -1));
+            }
+            TextView dots = new TextView(ctx); dots.setTextSize(24); dots.setTextColor(Color.LTGRAY);
+            FrameLayout.LayoutParams dotsLp = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+            dotsLp.bottomMargin = 40; box.addView(dots, dotsLp);
             StringBuilder entered = new StringBuilder(); int[] attempts = {0}; long[] blockedUntil = {0};
             box.setFocusableInTouchMode(true);
             box.setOnKeyListener((view, code, event) -> {
