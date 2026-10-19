@@ -1,10 +1,11 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-export type ThemeName = "gelap" | "terang" | "berwarna" | "cosmo";
+export type ThemeName = "putih" | "gelap" | "terang" | "berwarna" | "cosmo";
 
 const STORAGE_KEY = "billing-theme-v1";
 
 export const themeOptions: { value: ThemeName; label: string; hint: string }[] = [
+  { value: "putih", label: "Putih", hint: "Latar putih bersih dengan batas panel dan kolom yang tegas" },
   { value: "gelap", label: "Gelap", hint: "Latar gelap, nyaman untuk ruangan redup" },
   { value: "terang", label: "Kuning", hint: "Latar kuning lembut, hangat dan tidak menyilaukan" },
   { value: "berwarna", label: "Berwarna", hint: "Latar biru Chelsea dengan aksen emas" },
@@ -12,6 +13,7 @@ export const themeOptions: { value: ThemeName; label: string; hint: string }[] =
 ];
 
 const classFor: Record<ThemeName, string> = {
+  putih: "theme-putih",
   gelap: "dark theme-gelap",
   terang: "theme-terang",
   berwarna: "theme-berwarna",
