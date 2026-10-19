@@ -296,7 +296,6 @@ function BrandingPanel({
 
 const APP_FIELDS = [
   { key: "app_name", label: "Nama Aplikasi", placeholder: "RenToPlay" },
-  { key: "app_version", label: "Versi Aplikasi", placeholder: "v1.0" },
   { key: "release_date", label: "Tanggal Rilis", type: "date" },
   { key: "developer_name", label: "Nama Developer", placeholder: "Nama lengkap" },
   { key: "developer_email", label: "Email Developer", type: "email" },
@@ -315,7 +314,6 @@ function AppIdentityPanel({
   const { branding, loaded } = useBrandingRecord();
   const [form, setForm] = useState<Record<AppField, string>>({
     app_name: "",
-    app_version: "",
     release_date: "",
     developer_name: "",
     developer_email: "",
