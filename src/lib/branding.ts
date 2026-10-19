@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { CHANGELOG } from "@/lib/changelog";
+
+/** Versi aplikasi otomatis mengikuti entri teratas Change Log. */
+const autoAppVersion = () => CHANGELOG[0]?.version ?? "";
+
+/** Paksa versi dari Change Log pada setiap sumber branding (cache/db/event). */
+function withAutoVersion(b: Branding): Branding {
+  return { ...b, app_version: autoAppVersion() };
+}
 
 export type Branding = {
   logo_url: string;
