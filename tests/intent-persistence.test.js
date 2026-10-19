@@ -134,3 +134,35 @@ test('without cross-tab locking, recovery is blocked without deleting saved work
   expect(JSON.parse(storage.getItem(`${INTENT_QUEUE_PREFIX}store-a:old`)).journal).toEqual([row()]);
   fresh.close();
 });
+
+test('new edits after recovery overlay and send after recovered earlier work', async () => {
+  const { storage, locks } = setup();
+  const old = new IntentPersistence(storage, locks, 'old');
+  await old.open('store-a'); old.drainOwn('store-a', [row()]); await shutdown(old);
+  const fresh = new IntentPersistence(storage, locks, 'fresh');
+  await fresh.open('store-a');
+  const edit = { ...row(), transaction: 'later', payload: { total: 20000 }, base: row().payload };
+  fresh.saveJournal('store-a', [edit]); fresh.drainOwn('store-a', [edit]);
+  expect(fresh.queues('store-a').flatMap(q => Object.values(q.outbox))).toEqual([row(), edit]);
+  await fresh.open('store-a');
+  expect(fresh.queues('store-a').flatMap(q => Object.values(q.outbox))).toEqual([row(), edit]);
+  fresh.close();
+});
+
+test('failed recovery drain can retry without discarding its journal', async () => {
+  const { storage, locks } = setup();
+  const old = new IntentPersistence(storage, locks, 'old');
+  await old.open('store-a'); old.saveJournal('store-a', [row()]); await shutdown(old);
+  const fresh = new IntentPersistence(storage, locks, 'fresh');
+  const original = storage.setItem.bind(storage);
+  storage.setItem = (key, value) => {
+    if (key === `${INTENT_QUEUE_PREFIX}store-a:old`) throw new Error('quota');
+    original(key, value);
+  };
+  await expect(fresh.open('store-a')).rejects.toThrow('quota');
+  expect(JSON.parse(storage.getItem(`${INTENT_QUEUE_PREFIX}store-a:old`)).journal).toEqual([row()]);
+  storage.setItem = original;
+  await fresh.open('store-a');
+  expect(fresh.queues('store-a').flatMap(q => Object.values(q.outbox))).toEqual([row()]);
+  fresh.close();
+});

@@ -71,5 +71,5 @@ export function preserveConflicts(rows: Intent[]) {
     const key = intentStorageKey('conflicts');
     const previous = JSON.parse(localStorage.getItem(key) ?? '[]');
     localStorage.setItem(key, JSON.stringify([...previous, { at: Date.now(), records: rows }]));
-  } catch { /* never send rejected rows automatically */ }
+  } catch { throw new Error('Transaksi bertabrakan belum bisa disimpan untuk pemeriksaan. Jangan tutup aplikasi; periksa ruang penyimpanan.'); }
 }

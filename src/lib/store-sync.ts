@@ -387,7 +387,7 @@ export function useStoreSync(options: {
     for (const transaction of new Set(queued.map(i => i.transaction))) {
       const records = queued.filter(i => i.transaction === transaction).map(intent => {
         const key = recordKey(intent.kind, intent.entity_id);
-        return bootstrappedRef.current && shadowRef.current[key] === undefined && !outboxRef.current[key]
+        return bootstrappedRef.current && shadowRef.current[key] === undefined && !pendingRows(activeStoreId).some(row => recordKey(row.kind, row.entity_id) === key)
           ? { ...intent, base: null }
           : intent;
       });
@@ -442,6 +442,7 @@ export function useStoreSync(options: {
     void (async () => {
       try {
         await intentPersistence().open(storeId);
+        if (cancelled || stateRef.current.storeId !== storeId) return;
         const own = intentPersistence().ownQueue(storeId);
         if (own) outboxRef.current = own.outbox;
         queueLocalChanges(stateRef.current, storeId);
@@ -528,11 +529,13 @@ export function useStoreSync(options: {
 
     busyRef.current = true;
     setSyncing(true);
+    const stillCurrent = () => stateRef.current.storeId === storeId && localStorage.getItem(STORE_KEY) === storeId;
     try {
       // Pastikan pilihan store di perangkat masih sama dengan membership di
       // pusat. Ini penting untuk akun Developer yang dapat berganti store dari
       // perangkat lain. Jika berubah, hentikan sebelum satu baris pun diterapkan.
       const { data: auth, error: authError } = await supabase.auth.getUser();
+      if (!stillCurrent()) return;
       if (authError) throw authError;
       const userId = auth.user?.id;
       if (!userId) return;
@@ -542,6 +545,7 @@ export function useStoreSync(options: {
         .eq("user_id", userId)
         .limit(1)
         .maybeSingle();
+      if (!stillCurrent()) return;
       if (membershipError) throw membershipError;
       const currentStoreId = (membership as { store_id: string } | null)?.store_id ?? null;
       if (!currentStoreId) throw new Error("Akun belum terhubung ke store.");
@@ -581,6 +585,7 @@ export function useStoreSync(options: {
       // Audit penuh hanya mengambil baris aktif lalu MENGGANTI daftar lokal,
       // sehingga baris terhapus yang menumpuk tidak perlu diunduh ulang.
       const { data, error: pullError } = await fetchAllStoreData(storeId, since, auditNow);
+      if (!stillCurrent()) return;
       if (pullError) throw new Error(pullError.message);
       if (auditNow) lastAuditRef.current = Date.now();
       // Include actions committed while the network read was in flight before
@@ -605,6 +610,7 @@ export function useStoreSync(options: {
           shadowRef.current = {};
         } else if (conflicts) {
           const full = await fetchAllStoreData(storeId, null, true);
+          if (!stillCurrent()) return;
           if (full.error) throw new Error(full.error.message);
           applyRemote(prev => applyRecords(applyRecords(clearSyncedLists(prev), full.data), pendingRows(storeId)));
         } else {
@@ -634,6 +640,7 @@ export function useStoreSync(options: {
           _store_id: storeId,
           _records: rows as never,
         });
+        if (!stillCurrent()) return;
         // Journal draining can replace the outbox while the request is in flight.
         // Acknowledge against the latest queue, never a detached older object.
         outbox = queue.outbox;
@@ -649,6 +656,7 @@ export function useStoreSync(options: {
             if (current?.transaction === sentRecord.transaction) delete outbox[key];
           }
           const full = await fetchAllStoreData(storeId, null, true);
+          if (!stillCurrent()) return;
           if (full.error) throw new Error(full.error.message);
           applyRemote(prev => applyRecords(applyRecords(clearSyncedLists(prev), full.data), pendingRows(storeId)));
           toast.warning('Pusat menolak kiriman yang sudah tertinggal. Data terbaru dimuat; periksa dan ulangi tindakan yang diperlukan.', { duration: 15000 });

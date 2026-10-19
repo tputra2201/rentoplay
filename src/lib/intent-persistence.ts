@@ -98,7 +98,12 @@ export class IntentPersistence {
     for (const queue of this.queues(storeId)) this.drain(queue, queue.journal);
   }
 
-  queues(storeId: string) { return [...this.shards.values()].filter(shard => shard.storeId === storeId); }
+  queues(storeId: string) {
+    // Older recovered work precedes this runtime's edits. New actions may use
+    // an older pending payload as their base, and must be applied/sent last.
+    return [...this.shards.values()].filter(shard => shard.storeId === storeId)
+      .sort((a, b) => Number(a.owner === this.owner) - Number(b.owner === this.owner));
+  }
   ownQueue(storeId: string) { return this.own.get(storeId); }
 
   saveJournal(storeId: string, rows: Intent[]) {
