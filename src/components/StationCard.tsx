@@ -2,7 +2,6 @@ import { Gamepad2, Clock, Utensils, Infinity as InfinityIcon, Pause, PlayCircle,
 import { toast } from "sonner";
 import { canReleaseStation, releaseStationScreen } from "@/lib/tv-notify";
 import { Button } from "@/components/ui/button";
-import { type StationTone } from "@/lib/station-groups";
 import { cn } from "@/lib/utils";
 import { useCan } from "@/lib/use-can";
 import { Badge } from "@/components/ui/badge";

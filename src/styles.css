@@ -448,38 +448,8 @@
 }
 .theme-terang { --shadow-panel: 0 1px 3px oklch(0.4 0.05 80 / 0.12); }
 
-/* Group tones preserve the station status colors in every theme. */
-:root {
-  --station-blue: oklch(0.31 0.065 245);
-  --station-pink: oklch(0.31 0.065 350);
-  --station-mint: oklch(0.31 0.055 160);
-  --station-amber: oklch(0.32 0.055 80);
-  --station-lilac: oklch(0.31 0.065 300);
-  --station-cyan: oklch(0.31 0.055 205);
-}
-.theme-putih, .theme-terang {
-  --station-blue: oklch(0.94 0.03 245);
-  --station-pink: oklch(0.94 0.035 350);
-  --station-mint: oklch(0.94 0.035 160);
-  --station-amber: oklch(0.95 0.04 85);
-  --station-lilac: oklch(0.94 0.03 300);
-  --station-cyan: oklch(0.94 0.03 205);
-}
-.theme-berwarna, .theme-cosmo {
-  --station-blue: oklch(0.36 0.085 245);
-  --station-pink: oklch(0.36 0.085 350);
-  --station-mint: oklch(0.36 0.07 160);
-  --station-amber: oklch(0.37 0.07 80);
-  --station-lilac: oklch(0.36 0.085 300);
-  --station-cyan: oklch(0.36 0.07 205);
-}
-.station-group-card { background-image: none; background-color: var(--station-tone); }
-[data-station-tone="blue"] { --station-tone: var(--station-blue); }
-[data-station-tone="pink"] { --station-tone: var(--station-pink); }
-[data-station-tone="mint"] { --station-tone: var(--station-mint); }
-[data-station-tone="amber"] { --station-tone: var(--station-amber); }
-[data-station-tone="lilac"] { --station-tone: var(--station-lilac); }
-[data-station-tone="cyan"] { --station-tone: var(--station-cyan); }
+/* Kartu TV memakai satu latar netral yang sama di semua tema. */
+.station-group-card { background-image: var(--gradient-surface); }
 .setup-tabs-list { height: auto; min-height: 2.75rem; flex-wrap: wrap; justify-content: flex-start; gap: 0.25rem; border: 1px solid var(--border); background: var(--surface-head); }
 .setup-section { border-top: 1px solid var(--border); padding-top: 1.5rem; margin-top: 1.25rem; }
 .setup-section > h2, .setup-section > div:first-child:has(h2) { padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
