@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Volume dan pilihan HDMI selalu terlihat di panel Station kasir; baca status otomatis saat dibuka, pertahankan kontrol daya tanpa perubahan.
+
 - [x] Warna soft kelompok kartu TV lintas tema; rapikan Setup Station/Kafe/Store, IP TV dalam detail Daftar Station. Penyimpanan IP, daftar dan buka ulang teruji pada akun aktif; tab Kafe/Store, lima tema dan lebar mobile diperiksa tanpa error runtime.
 
 - [x] Pola arah/OK di Setup Station, Release tetap terpisah dari billing, WOL subnet dengan tiga pengiriman; Cast wake tidak dipakai (tidak ada protokol generik terverifikasi). 12 tes Bun + JVM pola/WOL lulus, sumber Android terkompilasi API35, penyimpanan/kirim pola dan Release diuji akun aktif dengan bridge simulasi; tampilan desktop/mobile diperiksa. ZIP Kasir 1.6.0 dan Companion 1.4.0 siap; panduan standby PC/ADB di README Companion.
