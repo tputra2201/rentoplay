@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Minus, Plus, X, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Check, Undo2, RotateCcw } from "lucide-react";
+import { Minus, Plus, X, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Check, Undo2, RotateCcw, Upload, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/integrations/supabase/client";
 import { useBilling } from "@/lib/billing-store";
 import { useStoreInfo } from "@/lib/store-info";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
