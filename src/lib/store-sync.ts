@@ -148,11 +148,13 @@ const persistQueues = (storeId: string) => {
 };
 const reconcileQueues = (storeId: string, records: SyncRecord[]) => {
   let conflicts = 0;
+  const preceding = new Map(records.map(row => [recordKey(row.kind, row.entity_id), row]));
   for (const queue of intentPersistence().queues(storeId)) {
     const next = structuredClone(queue.outbox);
-    conflicts += reconcileIntents(next, records, preserveConflicts);
+    conflicts += reconcileIntents(next, [...preceding.values()], preserveConflicts);
     intentPersistence().persist({ ...queue, outbox: next });
     queue.outbox = next;
+    for (const row of Object.values(next)) preceding.set(recordKey(row.kind, row.entity_id), row);
   }
   return conflicts;
 };
@@ -655,9 +657,11 @@ export function useStoreSync(options: {
             const current = outbox[key];
             if (current?.transaction === sentRecord.transaction) delete outbox[key];
           }
+          intentPersistence().persist(queue);
           const full = await fetchAllStoreData(storeId, null, true);
           if (!stillCurrent()) return;
           if (full.error) throw new Error(full.error.message);
+          reconcileQueues(storeId, full.data);
           applyRemote(prev => applyRecords(applyRecords(clearSyncedLists(prev), full.data), pendingRows(storeId)));
           toast.warning('Pusat menolak kiriman yang sudah tertinggal. Data terbaru dimuat; periksa dan ulangi tindakan yang diperlukan.', { duration: 15000 });
         } else {
