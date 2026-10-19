@@ -447,6 +447,48 @@ function AppIdentityPanel({
   );
 }
 
+function ChangelogPanel() {
+  const formatDate = (iso: string) =>
+    new Date(`${iso}T00:00:00`).toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+
+  return (
+    <div className="surface-panel grid gap-4 p-5">
+      <div>
+        <h2 className="flex items-center gap-2 font-display text-lg font-bold">
+          <History className="size-5" /> Change Log
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Riwayat perubahan setiap versi aplikasi. Entri terbaru ada di paling atas.
+        </p>
+      </div>
+      <ol className="grid gap-3">
+        {CHANGELOG.map((entry) => (
+          <li
+            key={entry.version}
+            className="rounded-lg border border-border/60 bg-secondary/20 px-4 py-3"
+          >
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <p className="font-display text-base font-bold">{entry.version}</p>
+              <p className="text-xs text-muted-foreground">
+                {formatDate(entry.date)}
+              </p>
+            </div>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+              {entry.changes.map((change) => (
+                <li key={change}>{change}</li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 type DeveloperRow = { user_id: string; email: string; created_at: string };
 
 function DeveloperPanel({
@@ -796,6 +838,8 @@ function ControlCenter() {
       <AppIdentityPanel busy={busy} post={post} />
 
       <BrandingPanel busy={busy} post={post} />
+
+      <ChangelogPanel />
 
       <DeveloperPanel
         busy={busy}
