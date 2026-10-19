@@ -327,7 +327,6 @@ function AppIdentityPanel({
     if (ready || !loaded) return;
     setForm({
       app_name: branding.app_name,
-      app_version: branding.app_version,
       release_date: branding.release_date,
       developer_name: branding.developer_name,
       developer_email: branding.developer_email,
@@ -368,6 +367,11 @@ function AppIdentityPanel({
           Nama aplikasi, versi, dan nomor kontak developer tampil di bawah nama
           store pada pojok kiri atas semua perangkat. Nama dan ikon aplikasi
           juga dipakai sebagai judul dan ikon website.
+        </p>
+        <p className="mt-2 text-sm">
+          <span className="font-semibold">Versi Aplikasi otomatis</span>{" "}
+          mengikuti entri teratas Change Log saat ini:{" "}
+          <span className="font-semibold">{CHANGELOG[0]?.version ?? "v1.0"}</span>.
         </p>
       </div>
 
@@ -431,11 +435,12 @@ function AppIdentityPanel({
         <Button
           disabled={busy}
           onClick={async () => {
+            const payload = { ...form, app_version: CHANGELOG[0]?.version ?? "v1.0" };
             const saved = await post(
-              { action: "branding", ...form },
+              { action: "branding", ...payload },
               "Identitas aplikasi tersimpan.",
             );
-            if (saved) updateBrandingCache(form);
+            if (saved) updateBrandingCache(payload);
           }}
         >
           <Save className="size-4" /> Simpan identitas aplikasi
