@@ -96,7 +96,6 @@ export function StationCard({
 
   return (
     <div
-      data-station-tone={tone}
       role="button"
       tabIndex={0}
       onClick={onClick}
@@ -120,10 +119,7 @@ export function StationCard({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h3
-            className={cn(
-              "truncate font-display text-xl font-extrabold uppercase tracking-wide",
-              statusNameColor[status],
-            )}
+            className="truncate font-display text-xl font-extrabold uppercase tracking-wide text-foreground"
           >
             {station.name}
           </h3>
