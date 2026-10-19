@@ -2,7 +2,6 @@ import { Gamepad2, Clock, Utensils, Infinity as InfinityIcon, Pause, PlayCircle,
 import { toast } from "sonner";
 import { canReleaseStation, releaseStationScreen } from "@/lib/tv-notify";
 import { Button } from "@/components/ui/button";
-import { type StationTone } from "@/lib/station-groups";
 import { cn } from "@/lib/utils";
 import { useCan } from "@/lib/use-can";
 import { Badge } from "@/components/ui/badge";
@@ -43,12 +42,10 @@ export function StationCard({
   station,
   now,
   onClick,
-  tone = "blue",
 }: {
   station: Station;
   now: number;
   onClick: () => void;
-  tone?: StationTone;
 }) {
   const {
     bookings,
@@ -99,7 +96,6 @@ export function StationCard({
 
   return (
     <div
-      data-station-tone={tone}
       role="button"
       tabIndex={0}
       onClick={onClick}
@@ -123,10 +119,7 @@ export function StationCard({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h3
-            className={cn(
-              "truncate font-display text-xl font-extrabold uppercase tracking-wide",
-              statusNameColor[status],
-            )}
+            className="truncate font-display text-xl font-extrabold uppercase tracking-wide text-foreground"
           >
             {station.name}
           </h3>
