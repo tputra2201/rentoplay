@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { CHANGELOG } from "@/lib/changelog";
+
+/** Versi aplikasi otomatis mengikuti entri teratas Change Log. */
+const autoAppVersion = () => CHANGELOG[0]?.version ?? "";
+
+/** Paksa versi dari Change Log pada setiap sumber branding (cache/db/event). */
+function withAutoVersion(b: Branding): Branding {
+  return { ...b, app_version: autoAppVersion() };
+}
 
 export type Branding = {
   logo_url: string;
@@ -67,12 +76,14 @@ export function updateBrandingCache(patch: Partial<Branding>) {
 
 /** Tampilan halaman masuk yang diatur Developer, plus status selesai dimuat. */
 export function useBrandingRecord() {
-  const [branding, setBranding] = useState<Branding>(defaultBranding);
+  const [branding, setBranding] = useState<Branding>(() =>
+    withAutoVersion(defaultBranding),
+  );
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const cached = readCache();
-    if (cached) setBranding({ ...defaultBranding, ...cached });
+    if (cached) setBranding(withAutoVersion({ ...defaultBranding, ...cached }));
     let cancelled = false;
     (async () => {
       const { data } = await supabase
@@ -82,7 +93,7 @@ export function useBrandingRecord() {
         .maybeSingle();
       if (cancelled) return;
       if (data) {
-        const row = { ...defaultBranding, ...(data as Branding) };
+        const row = withAutoVersion({ ...defaultBranding, ...(data as Branding) });
         setBranding(row);
         try {
           localStorage.setItem(CACHE_KEY, JSON.stringify(row));
@@ -100,7 +111,7 @@ export function useBrandingRecord() {
   useEffect(() => {
     const receive = (event: Event) => {
       const customEvent = event as CustomEvent<Branding>;
-      setBranding({ ...defaultBranding, ...customEvent.detail });
+      setBranding(withAutoVersion({ ...defaultBranding, ...customEvent.detail }));
       setLoaded(true);
     };
     window.addEventListener(BRANDING_EVENT, receive);
