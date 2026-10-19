@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Perbaiki pemulihan antrean transaksi luring setelah aplikasi ditutup, tanpa mengambil antrean tab yang masih aktif; uji pembukaan ulang dan sinkronisasi.
+
 - [x] Volume dan HDMI selalu terlihat di panel Station, status dibaca otomatis; kontrol daya tidak diubah. Lima tes lulus, build OK; akun aktif teruji dengan bridge simulasi (volume 35→36, HDMI 2), desktop/mobile tanpa error. Uji TV fisik menunggu perangkat pengguna.
 
 - [x] Warna soft kelompok kartu TV lintas tema; rapikan Setup Station/Kafe/Store, IP TV dalam detail Daftar Station. Penyimpanan IP, daftar dan buka ulang teruji pada akun aktif; tab Kafe/Store, lima tema dan lebar mobile diperiksa tanpa error runtime.
