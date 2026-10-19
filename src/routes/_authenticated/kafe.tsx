@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -35,13 +36,13 @@ import { PRINTER_ROLE_LABEL } from "@/lib/printing";
 export const Route = createFileRoute("/_authenticated/kafe")({
   head: () => ({
     meta: [
-      { title: "Pengaturan Meja Kafe — RenToPlay" },
+      { title: "Setup Kafe — RenToPlay" },
       {
         name: "description",
         content:
           "Atur nomor meja, area, dan jumlah kursi untuk layanan kafe tanpa rental PlayStation.",
       },
-      { property: "og:title", content: "Pengaturan Meja Kafe" },
+      { property: "og:title", content: "Setup Kafe" },
       {
         property: "og:description",
         content: "Tambah, ubah, atau hapus nomor meja kafe beserta area dan jumlah kursi.",
@@ -118,7 +119,7 @@ function KafePage() {
     <div className="space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-neon text-3xl font-extrabold sm:text-4xl">
-          Pengaturan Meja Kafe
+          Setup Kafe
         </h1>
         <div className="text-right">
           <p className="text-xs text-muted-foreground">{openTables.length} meja terisi</p>
@@ -126,7 +127,10 @@ function KafePage() {
         </div>
       </header>
 
-      <section className="surface-panel p-4 sm:p-6">
+      <Tabs defaultValue="menu">
+        <TabsList className="setup-tabs-list"><TabsTrigger value="menu">Menu ({menu.length})</TabsTrigger><TabsTrigger value="categories">Kategori ({menuCategories.length})</TabsTrigger><TabsTrigger value="tables">Meja ({cafeTables.length})</TabsTrigger></TabsList>
+      <TabsContent value="tables">
+      <section className="setup-section">
         <SetupHeading
           title="Nomor Meja"
           description="Nomor meja, area, dan jumlah kursi bisa diubah kapan saja."
@@ -206,6 +210,7 @@ function KafePage() {
           )}
         />
 
+        <details className="mt-5 border-t border-border pt-4"><summary className="cursor-pointer font-semibold text-primary">Tambah Meja</summary>
         <form
           className="mt-4 grid gap-2 sm:grid-cols-[1fr_1fr_120px_auto]"
           onSubmit={(e) => {
@@ -242,9 +247,12 @@ function KafePage() {
             <Plus className="size-4" /> Tambah
           </Button>
         </form>
+        </details>
       </section>
 
-      <section className="surface-panel p-4 sm:p-6">
+      </TabsContent>
+      <TabsContent value="categories">
+      <section className="setup-section">
         <SetupHeading
           title="Kategori Menu"
           description="Kategori bebas ditambah, diganti nama, atau dihapus (jika tidak ada menu di dalamnya)."
@@ -297,6 +305,7 @@ function KafePage() {
             </DetailField>
           )}
         />
+        <details className="mt-5 border-t border-border pt-4"><summary className="cursor-pointer font-semibold text-primary">Tambah Kategori</summary>
         <form
           className="mt-4 flex flex-wrap gap-2"
           onSubmit={(e) => {
@@ -319,9 +328,12 @@ function KafePage() {
             <Plus className="size-4" /> Tambah
           </Button>
         </form>
+        </details>
       </section>
 
-      <section className="surface-panel p-4 sm:p-6">
+      </TabsContent>
+      <TabsContent value="menu">
+      <section className="setup-section">
         <SetupHeading
           title="Menu Makanan & Minuman"
           description="Klik tombol detail untuk mengatur harga, diskon, printer label, dan modifier tiap menu."
@@ -522,6 +534,7 @@ function KafePage() {
           ))}
         </Accordion>
 
+        <details className="mt-5 border-t border-border pt-4"><summary className="cursor-pointer font-semibold text-primary">Tambah Menu</summary>
         <form
           className="mt-4 grid gap-2 sm:grid-cols-[1fr_180px_140px_auto]"
           onSubmit={(e) => {
@@ -568,7 +581,10 @@ function KafePage() {
             <Plus className="size-4" /> Tambah
           </Button>
         </form>
+        </details>
       </section>
+      </TabsContent>
+      </Tabs>
     </div>
   );
 }

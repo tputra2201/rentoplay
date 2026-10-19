@@ -30,3 +30,6 @@
 - Station Release dismisses only its configured TV overlay, never billing or session state; expiry eligibility and dispatch are tested in tests/tv-notify.test.js.
 - Notification configuration keeps legacy message strings alongside optional structured lines and per-stage titles; Android forwards resolved titles/messages so older configurations remain valid.
 - Store logo uploads use the shared PNG processor with bounded payload size and opt-in border-connected background removal; alpha and enclosed logo details must remain intact.
+
+- Station group tones derive from name prefixes (with six-item fallback) and CSS theme tokens, independent of billing status and responsive grid position, so group identity remains stable.
+- Station, Cafe and Store setup use focused tabs; per-station TV connection fields live in the station detail sheet and keep existing device-local storage, so configuration has one entry point without changing synchronization.
