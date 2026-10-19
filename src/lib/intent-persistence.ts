@@ -16,10 +16,10 @@ export type LockPort = {
 const validIntent = (row: unknown): row is Intent => {
   if (!row || typeof row !== 'object') return false;
   const r = row as Record<string, unknown>;
-  return typeof r.kind === 'string' && typeof r.entity_id === 'string' &&
-    typeof r.transaction === 'string' && !!r.transaction && typeof r.deleted === 'boolean' &&
-    !!r.payload && typeof r.payload === 'object' &&
-    (r.base === null || (!!r.base && typeof r.base === 'object'));
+  return typeof r['kind'] === 'string' && typeof r['entity_id'] === 'string' &&
+    typeof r['transaction'] === 'string' && !!r['transaction'] && typeof r['deleted'] === 'boolean' &&
+    !!r['payload'] && typeof r['payload'] === 'object' &&
+    (r['base'] === null || (!!r['base'] && typeof r['base'] === 'object'));
 };
 
 function readEnvelope(storage: StoragePort, key: string): IntentEnvelope | null {
