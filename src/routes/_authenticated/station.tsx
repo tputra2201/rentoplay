@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Tv } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,9 @@ import {
 } from "@/components/ui/select";
 import { useBilling, type ConsoleType, type StationAvailability } from "@/lib/billing-store";
 import { SetupHeading, SetupTable, DetailField } from "@/components/SetupTable";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { StationTvSettings } from "@/components/StationTvSettings";
+import { tvIps } from "@/lib/tv-notify";
 import { TvNotifySettings } from "@/components/TvNotifySettings";
 
 const STATION_STATUS_LABEL: Record<StationAvailability, string> = {
@@ -40,6 +43,8 @@ export const Route = createFileRoute("/_authenticated/station")({
 function StationPage() {
   const { stations, addStation, setStationConsole, removeStation, updateStation, reorderList, consoleTypes, businessProfile } =
     useBilling();
+  const [ips, setIps] = useState<Record<string, string>>({});
+  useEffect(() => { setIps(tvIps()); }, []);
   const [name, setName] = useState("");
   const [booth, setBooth] = useState("");
   const [consoleType, setConsoleType] = useState<ConsoleType>(consoleTypes[0] ?? "PS4");
@@ -49,7 +54,10 @@ function StationPage() {
       <header>
         <h1 className="text-3xl font-bold sm:text-4xl">Setup Station</h1>
       </header>
-      <section className="surface-panel p-6">
+      <Tabs defaultValue="stations">
+        <TabsList className="setup-tabs-list"><TabsTrigger value="stations">Daftar Station</TabsTrigger><TabsTrigger value="add">Tambah Station</TabsTrigger>{businessProfile?.modules?.tvConnect !== false && <TabsTrigger value="tv">Pengaturan TV</TabsTrigger>}</TabsList>
+      <TabsContent value="add">
+      <section className="setup-section">
         <h2 className="text-xl font-semibold">Tambah Station</h2>
         <form
           className="mt-4 grid gap-2 sm:grid-cols-[1fr_1fr_140px_auto]"
@@ -107,7 +115,9 @@ function StationPage() {
         </form>
       </section>
 
-      <section className="surface-panel p-4 sm:p-6">
+      </TabsContent>
+      <TabsContent value="stations">
+      <section className="setup-section">
         <SetupHeading
           title={`Daftar Station (${stations.length})`}
           right={<Tv className="size-5 text-primary" />}
@@ -137,6 +147,7 @@ function StationPage() {
               sortValue: (s) => s.console.toLowerCase(),
               render: (s) => s.console,
             },
+            ...(businessProfile?.modules?.tvConnect !== false ? [{ key: "ip", header: "IP Layar TV", render: (s: { id: string }) => <span className={ips[s.id] ? "font-mono text-foreground" : "text-muted-foreground"}>{ips[s.id] || "Belum diisi"}</span> }] : []),
             {
               key: "status",
               header: "Status",
@@ -160,9 +171,11 @@ function StationPage() {
             toast.success(`${s.name} dihapus`);
           }}
           detailTitle={(s) => `Station ${s.name}`}
-          detailDescription={() => "Ubah nomor TV, room, konsol, dan status unit ini."}
+          detailDescription={() => "Identitas Station dan koneksi layar TV."}
           renderDetail={(s) => (
-            <>
+            <Tabs defaultValue="unit">
+              <TabsList className="setup-tabs-list"><TabsTrigger value="unit">Identitas Station</TabsTrigger>{businessProfile?.modules?.tvConnect !== false && <TabsTrigger value="screen">Layar TV</TabsTrigger>}</TabsList>
+              <TabsContent value="unit" className="space-y-4">
               <DetailField label="Station">
                 <Input
                   value={s.name}
@@ -215,15 +228,19 @@ function StationPage() {
                   </Select>
                 </DetailField>
               </div>
-            </>
+              </TabsContent>
+              {businessProfile?.modules?.tvConnect !== false && <TabsContent value="screen"><StationTvSettings stationId={s.id} name={s.name} onIpChange={() => setIps(tvIps())} /></TabsContent>}
+            </Tabs>
           )}
         />
       </section>
+      </TabsContent>
       {businessProfile?.modules?.tvConnect !== false && (
-      <section className="surface-panel p-4 sm:p-6">
+      <TabsContent value="tv"><section className="setup-section">
         <TvNotifySettings />
-      </section>
+      </section></TabsContent>
       )}
+      </Tabs>
     </div>
   );
 }

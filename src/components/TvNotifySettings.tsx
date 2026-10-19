@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Minus, Plus, X, ChevronDown, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Check, Undo2, RotateCcw } from "lucide-react";
+import { Minus, Plus, X, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Check, Undo2, RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useBilling } from "@/lib/billing-store";
 import { useStoreInfo } from "@/lib/store-info";
-import { TvControlPanel } from "@/components/TvControlPanel";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   controlTv,
   saveTvGlobalSettings,
@@ -19,12 +19,10 @@ import {
 import {
   DEFAULT_TV_CONFIG,
   saveTvConfig,
-  setTvIp,
   tvBridge,
   tvConfig,
   tvIps,
   messageLines,
-  tvMessage,
   type TvNotifyConfig,
 } from "@/lib/tv-notify";
 
@@ -41,20 +39,15 @@ const PATTERN_SYMBOL: Record<string, string> = { U: "↑", D: "↓", L: "←", R
 export function TvNotifySettings() {
   const { stations } = useBilling();
   const { store } = useStoreInfo(true);
-  const [ips, setIps] = useState<Record<string, string>>({});
   const [cfg, setCfg] = useState<TvNotifyConfig>(DEFAULT_TV_CONFIG);
   const [global, setGlobal] = useState<TvGlobalSettings>(tvGlobalSettings());
-  const [openId, setOpenId] = useState<string | null>(null);
   const [sendingAll, setSendingAll] = useState(false);
   const [ready, setReady] = useState(false);
-  const [modern, setModern] = useState(false);
   useEffect(() => {
-    setIps(tvIps());
     setCfg(tvConfig());
     setGlobal(tvGlobalSettings());
     const b = tvBridge();
     setReady(Boolean(b));
-    setModern(Boolean(b?.scheduleJson));
   }, []);
 
   const update = (next: TvNotifyConfig) => {
@@ -72,6 +65,7 @@ export function TvNotifySettings() {
       toast.error("Pola remote harus 4–6 tombol arah/OK.");
       return;
     }
+    const ips = tvIps();
     const targets = stations.filter((st) => ips[st.id]?.trim());
     if (!targets.length) {
       toast.error("Belum ada IP TV yang diisi.");
@@ -93,45 +87,10 @@ export function TvNotifySettings() {
     else toast.success(`Pengaturan tersimpan di ${ok} TV.`);
   };
 
-  const test = (id: string, name: string) => {
-    const ip = ips[id]?.trim();
-    const bridge = tvBridge();
-    if (!bridge || !ip) return;
-    const stage = cfg.stages[0];
-    const title = (stage?.title ?? `${store?.store_name || "RenToPlay"} - ${name}`).replace(/\{menit\}/g, String(stage?.minutes ?? 10));
-    const message = tvMessage(stage?.message ?? "Tes notifikasi dari kasir.", stage?.messageLines).replace(/\{menit\}/g, String(stage?.minutes ?? 10));
-    bridge.sendNow(ip, title, message, "warning");
-    toast.success(`Tes dikirim ke ${ip}`);
-  };
-
-  const testBlock = (id: string, name: string) => {
-    const ip = ips[id]?.trim();
-    const bridge = tvBridge();
-    if (!bridge?.sendJson || !ip) return;
-    bridge.sendJson(
-      ip,
-      JSON.stringify({
-        title: cfg.endTitle,
-        subtitle: `${store?.store_name || "RenToPlay"} - ${name}`,
-        message: tvMessage(cfg.endMessage, cfg.endMessageLines),
-        level: "danger",
-        block: true,
-        logo: store?.logo_url ?? "",
-      }),
-    );
-    toast.success(`Layar penuh dikirim ke ${name}`);
-  };
-
-  const release = (id: string, name: string) => {
-    const ip = ips[id]?.trim();
-    const bridge = tvBridge();
-    if (!bridge?.dismiss || !ip) return;
-    bridge.dismiss(ip);
-    toast.success(`Layar ${name} dilepas`);
-  };
-
   return (
-    <div className="space-y-6 text-sm">
+    <Tabs defaultValue="global" className="text-sm">
+      <TabsList className="setup-tabs-list"><TabsTrigger value="global">Sambutan & Pola</TabsTrigger><TabsTrigger value="reminders">Pengingat Waktu</TabsTrigger><TabsTrigger value="end">Waktu Habis</TabsTrigger></TabsList>
+      <TabsContent value="global" className="space-y-6">
       <div className="space-y-3">
         <h2 className="text-xl font-semibold">Pengaturan Global TV</h2>
         <p className="text-xs text-muted-foreground">
@@ -169,62 +128,8 @@ export function TvNotifySettings() {
         </Button>
       </div>
 
-      <div className="space-y-2">
-        <h2 className="text-xl font-semibold">IP Layar Station</h2>
-        <p className="text-xs text-muted-foreground">
-          {ready
-            ? "Isi IP yang tampil di aplikasi RenToPlay TV. Pengingat tetap terkirim walau aplikasi kasir di latar belakang."
-            : "Hanya bisa dari aplikasi Android kasir (bukan Chrome)."}
-          {ready && !modern && " Pasang APK kasir terbaru agar pesan kustom & layar penuh aktif."}
-        </p>
-        {stations.map((st) => {
-          const ip = ips[st.id]?.trim();
-          const open = openId === st.id;
-          return (
-            <div key={st.id} className="rounded-lg border border-border">
-              <button
-                type="button"
-                className="flex w-full items-center gap-2 p-3 text-left"
-                aria-expanded={open}
-                onClick={() => setOpenId(open ? null : st.id)}
-              >
-                <ChevronDown className={`size-4 shrink-0 transition-transform ${open ? "" : "-rotate-90"}`} />
-                <span className="min-w-0 flex-1 truncate font-medium">{st.name}</span>
-                <span className={`shrink-0 text-xs ${ip ? "text-muted-foreground" : "font-medium text-destructive"}`}>
-                  {ip || "IP belum diisi"}
-                </span>
-              </button>
-              {open && (
-                <div className="space-y-3 border-t border-border p-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Input
-                      inputMode="decimal"
-                      placeholder="192.168.x.x"
-                      value={ips[st.id] ?? ""}
-                      onChange={(e) => setIps({ ...ips, [st.id]: e.target.value })}
-                      onBlur={(e) => setTvIp(st.id, e.target.value)}
-                      disabled={!ready}
-                      className="h-8 w-40"
-                      aria-label={`IP TV ${st.name}`}
-                    />
-                    <Button size="sm" variant="outline" onClick={() => test(st.id, st.name)} disabled={!ready || !ip}>
-                      Tes
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => testBlock(st.id, st.name)} disabled={!modern || !ip}>
-                      Tes Layar Penuh
-                    </Button>
-                    <Button size="sm" onClick={() => release(st.id, st.name)} disabled={!modern || !ip}>
-                      Lepas Layar
-                    </Button>
-                  </div>
-                  <TvControlPanel stationId={st.id} setup />
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
+      </TabsContent>
+      <TabsContent value="reminders" className="space-y-6">
       <div className="space-y-3">
         <h2 className="text-xl font-semibold">Pengingat Waktu</h2>
         <p className="text-xs text-muted-foreground">
@@ -292,6 +197,8 @@ export function TvNotifySettings() {
         </Button>
       </div>
 
+      </TabsContent>
+      <TabsContent value="end">
       <div className="space-y-3">
         <h2 className="text-xl font-semibold">Saat Waktu Habis</h2>
         <div className="space-y-1.5">
@@ -316,6 +223,7 @@ export function TvNotifySettings() {
           <Minus className="size-4" /> Kembalikan bawaan
         </Button>
       </div>
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }

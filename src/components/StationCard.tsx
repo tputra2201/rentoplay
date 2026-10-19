@@ -2,6 +2,7 @@ import { Gamepad2, Clock, Utensils, Infinity as InfinityIcon, Pause, PlayCircle,
 import { toast } from "sonner";
 import { canReleaseStation, releaseStationScreen } from "@/lib/tv-notify";
 import { Button } from "@/components/ui/button";
+import { type StationTone } from "@/lib/station-groups";
 import { cn } from "@/lib/utils";
 import { useCan } from "@/lib/use-can";
 import { Badge } from "@/components/ui/badge";
@@ -42,10 +43,12 @@ export function StationCard({
   station,
   now,
   onClick,
+  tone = "blue",
 }: {
   station: Station;
   now: number;
   onClick: () => void;
+  tone?: StationTone;
 }) {
   const {
     bookings,
@@ -96,6 +99,7 @@ export function StationCard({
 
   return (
     <div
+      data-station-tone={tone}
       role="button"
       tabIndex={0}
       onClick={onClick}
@@ -107,7 +111,7 @@ export function StationCard({
         }
       }}
       className={cn(
-        "surface-panel group cursor-pointer relative block w-full min-w-0 max-w-full overflow-hidden p-3 text-left transition-transform duration-200 hover:-translate-y-1",
+        "surface-panel station-group-card group cursor-pointer relative block w-full min-w-0 max-w-full overflow-hidden p-3 text-left transition-transform duration-200 hover:-translate-y-1",
         status === "idle" && "opacity-90 hover:glow-primary",
         status === "booked" && "border-primary/60 glow-primary",
         status === "playing" && "glow-accent",

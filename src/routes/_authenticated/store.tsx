@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DeviceNotifySettings } from "@/components/DeviceNotifySettings";
 import { createFileRoute } from "@tanstack/react-router";
 import { Store, ImageUp, ShieldCheck, Clock, Plus, Trash2 } from "lucide-react";
@@ -100,7 +101,7 @@ function LogoSection({
   const current = preview ?? logoUrl;
 
   return (
-    <div className="surface-panel grid gap-4 p-5">
+    <div className="setup-section grid gap-4">
       <div>
         <h2 className="flex items-center gap-2 font-display text-lg font-bold">
           <ImageUp className="size-5" /> Logo Store
@@ -338,7 +339,7 @@ function DeviceAccessSection({
   const thisRegistered = devices.some((d) => d.code === code);
 
   return (
-    <div className="surface-panel grid gap-4 p-5">
+    <div className="setup-section grid gap-4">
       <div>
         <h2 className="flex items-center gap-2 font-display text-lg font-bold">
           <ShieldCheck className="size-5" /> Perangkat yang Diizinkan
@@ -504,7 +505,7 @@ function OperatingHoursSection() {
   const [close, setClose] = useState(String(operatingHours.closeHour));
 
   return (
-    <div className="surface-panel grid gap-4 p-5">
+    <div className="setup-section grid gap-4">
       <div className="flex items-center gap-2">
         <Clock className="size-5 text-primary" />
         <h2 className="font-display text-lg font-bold">Jam Operasional</h2>
@@ -568,7 +569,7 @@ function SessionSecuritySection() {
 
 
   return (
-    <div className="surface-panel grid gap-4 p-5">
+    <div className="setup-section grid gap-4">
       <div className="flex items-center gap-2">
         <ShieldCheck className="size-5 text-primary" />
         <h2 className="font-display text-lg font-bold">Keamanan Sesi &amp; Alarm</h2>
@@ -808,7 +809,7 @@ function ModulesSection() {
     ["tvConnect", "TV Connect", "Notifikasi ke layar TV Companion dan tombol Release."],
   ] as const;
   return (
-    <section className="surface-panel space-y-4 p-5">
+    <section className="setup-section space-y-4">
       <div>
         <h2 className="font-display text-lg font-bold">Modul Aktif</h2>
         <p className="text-sm text-muted-foreground">
@@ -853,7 +854,7 @@ function EarlyEndOfDaySection() {
   const shiftOpen = shifts.some((s) => !s.closedAt);
   const pad = (h: number) => `${String(h).padStart(2, "0")}:00`;
   return (
-    <section className="surface-panel grid gap-3 p-5">
+    <section className="setup-section grid gap-3">
       <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
         <Clock className="size-5" /> End of Day lebih awal
       </h2>
@@ -949,13 +950,13 @@ function StorePage() {
         </p>
       </div>
 
-      <OperatingHoursSection />
-      <EarlyEndOfDaySection />
-      <ModulesSection />
-      <SessionSecuritySection />
-
-      <LogoSection storeId={store?.id} logoUrl={store?.logo_url ?? ""} />
-
+      <Tabs defaultValue="identity">
+        <TabsList className="setup-tabs-list"><TabsTrigger value="identity">Identitas</TabsTrigger><TabsTrigger value="operations">Operasional</TabsTrigger><TabsTrigger value="modules">Modul</TabsTrigger><TabsTrigger value="security">Keamanan</TabsTrigger><TabsTrigger value="devices">Perangkat</TabsTrigger><TabsTrigger value="logo">Logo</TabsTrigger></TabsList>
+      <TabsContent value="operations" className="space-y-5"><OperatingHoursSection /><EarlyEndOfDaySection /></TabsContent>
+      <TabsContent value="modules"><ModulesSection /></TabsContent>
+      <TabsContent value="security"><SessionSecuritySection /></TabsContent>
+      <TabsContent value="logo"><LogoSection storeId={store?.id} logoUrl={store?.logo_url ?? ""} /></TabsContent>
+      <TabsContent value="devices">
       <DeviceAccessSection
         storeId={store?.id}
         storeName={store?.store_name ?? ""}
@@ -963,7 +964,9 @@ function StorePage() {
         allowedIpsSaved={store?.allowed_ips ?? []}
       />
 
-      <div className="surface-panel grid gap-4 p-5 sm:grid-cols-2">
+      </TabsContent>
+      <TabsContent value="identity">
+      <div className="setup-section grid gap-4 sm:grid-cols-2">
         {loading && (
           <p className="text-sm text-muted-foreground sm:col-span-2">Memuat data store…</p>
         )}
@@ -983,6 +986,8 @@ function StorePage() {
             </div>
           ))}
       </div>
+      </TabsContent>
+      </Tabs>
     </div>
   );
 }
