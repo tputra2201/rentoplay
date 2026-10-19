@@ -2,6 +2,7 @@ import { useUnitLabel } from "@/lib/billing-store";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Activity, Coins, MonitorPlay } from "lucide-react";
+import { stationTones } from "@/lib/station-groups";
 import { StationCard } from "@/components/StationCard";
 import { SortableArea, SortableItem } from "@/components/Sortable";
 import { StationDialog } from "@/components/StationDialog";
@@ -56,6 +57,7 @@ function Dashboard() {
   } = useBilling();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  const tones = stationTones(stations);
   const active = stations.filter((s) => s.session);
   const available = stations.filter((s) => stationStatus(s, now, bookings) === "idle");
   const openBill = active.reduce((sum, s) => {
@@ -155,6 +157,7 @@ function Dashboard() {
             className="min-w-0"
           >
             <StationCard
+              tone={tones[station.id]}
               station={station}
               now={now}
               onClick={() => setSelectedId(station.id)}
