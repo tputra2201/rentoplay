@@ -9,6 +9,7 @@ class MemoryStorage {
   key(i) { return [...this.values.keys()][i] ?? null; }
   getItem(k) { return this.values.get(k) ?? null; }
   setItem(k, v) { if (this.fail) throw new Error('quota'); this.values.set(k, v); }
+  removeItem(k) { this.values.delete(k); }
 }
 class Locks {
   held = new Set();
@@ -165,4 +166,92 @@ test('failed recovery drain can retry without discarding its journal', async () 
   await fresh.open('store-a');
   expect(fresh.queues('store-a').flatMap(q => Object.values(q.outbox))).toEqual([row()]);
   fresh.close();
+});
+
+test('100 idle app reloads leave no durable queue envelopes', async () => {
+  const { storage, locks } = setup();
+  for (let i = 0; i < 100; i++) {
+    const queue = new IntentPersistence(storage, locks, `reload-${i}`);
+    await queue.open('store-a');
+    await shutdown(queue);
+  }
+  expect(storage.length).toBe(0);
+});
+
+test('persist removes acknowledged empty queues but preserves an undrained journal', async () => {
+  const { storage, locks } = setup();
+  const queue = new IntentPersistence(storage, locks, 'a');
+  await queue.open('store-a');
+  queue.drainOwn('store-a', [row()]);
+  const shard = queue.ownQueue('store-a');
+  queue.saveJournal('store-a', [row('sale-2')]);
+  shard.outbox = {};
+  queue.persist(shard);
+  const key = `${INTENT_QUEUE_PREFIX}store-a:a`;
+  expect(JSON.parse(storage.getItem(key)).journal).toEqual([row('sale-2')]);
+  queue.saveJournal('store-a', []);
+  expect(storage.getItem(key)).toBeNull();
+  queue.saveJournal('store-a', [row('sale-3')]);
+  expect(JSON.parse(storage.getItem(key)).journal).toEqual([row('sale-3')]);
+  queue.close();
+});
+
+const emptyEnvelope = (storeId, owner) => ({ version: 2, storeId, owner, journal: [], outbox: {} });
+const seedEmpty = (storage, storeId, owner) => {
+  const key = `${INTENT_QUEUE_PREFIX}${storeId}:${owner}`;
+  storage.setItem(key, JSON.stringify(emptyEnvelope(storeId, owner)));
+  return key;
+};
+
+test('startup cleans old empty same-store shards but retains pending, foreign and malformed data', async () => {
+  const { storage, locks } = setup();
+  for (let i = 0; i < 50; i++) seedEmpty(storage, 'store-a', `old-${i}`);
+  const foreign = seedEmpty(storage, 'store-b', 'old');
+  const malformed = `${INTENT_QUEUE_PREFIX}store-a:malformed`;
+  storage.setItem(malformed, JSON.stringify({ ...emptyEnvelope('store-a', 'malformed'), outbox: [] }));
+  const pending = `${INTENT_QUEUE_PREFIX}store-a:pending`;
+  storage.setItem(pending, JSON.stringify({ ...emptyEnvelope('store-a', 'pending'), journal: [row()] }));
+  const queue = new IntentPersistence(storage, locks, 'fresh');
+  await queue.open('store-a');
+  expect([...storage.values.keys()].sort()).toEqual([foreign, malformed, pending].sort());
+  expect(queue.queues('store-a').flatMap(q => Object.values(q.outbox))).toEqual([row()]);
+  const recovered = queue.queues('store-a').find(q => q.owner === 'pending');
+  recovered.outbox = {};
+  queue.persist(recovered);
+  expect(storage.getItem(pending)).toBeNull();
+  queue.close();
+});
+
+test('startup never deletes an empty shard owned by a live tab', async () => {
+  const { storage, locks } = setup();
+  const key = seedEmpty(storage, 'store-a', 'live');
+  locks.held.add(key);
+  const queue = new IntentPersistence(storage, locks, 'fresh');
+  await queue.open('store-a');
+  expect(storage.getItem(key)).not.toBeNull();
+  queue.close();
+});
+
+test('cleanup rereads under the lock and retains work written after the scan', async () => {
+  const { storage, locks } = setup();
+  const key = seedEmpty(storage, 'store-a', 'old');
+  const request = locks.request.bind(locks);
+  locks.request = (name, options, callback) => {
+    if (name === key) storage.setItem(key, JSON.stringify({ ...emptyEnvelope('store-a', 'old'), journal: [row()] }));
+    return request(name, options, callback);
+  };
+  const queue = new IntentPersistence(storage, locks, 'fresh');
+  await queue.open('store-a');
+  expect(JSON.parse(storage.getItem(key)).outbox['history:sale-1']).toEqual(row());
+  queue.close();
+});
+
+test('without locks old empty shards remain untouched and idle startup needs no quota', async () => {
+  const { storage } = setup();
+  const key = seedEmpty(storage, 'store-a', 'old');
+  storage.fail = true;
+  const queue = new IntentPersistence(storage, undefined, 'fresh');
+  await queue.open('store-a');
+  expect([...storage.values.keys()]).toEqual([key]);
+  queue.close();
 });

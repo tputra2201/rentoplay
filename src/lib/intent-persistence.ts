@@ -8,7 +8,7 @@ export type IntentEnvelope = {
   journal: Intent[];
   outbox: Record<string, Intent>;
 };
-type StoragePort = Pick<Storage, 'getItem' | 'setItem' | 'key' | 'length'>;
+type StoragePort = Pick<Storage, 'getItem' | 'setItem' | 'removeItem' | 'key' | 'length'>;
 export type LockPort = {
   request(name: string, options: { ifAvailable: true }, callback: (lock: unknown | null) => Promise<void>): Promise<unknown>;
 };
@@ -27,7 +27,8 @@ function readEnvelope(storage: StoragePort, key: string): IntentEnvelope | null 
     const value = JSON.parse(storage.getItem(key) ?? 'null') as IntentEnvelope | null;
     if (value?.version !== 2 || typeof value.storeId !== 'string' || typeof value.owner !== 'string' ||
         !Array.isArray(value.journal) || !value.journal.every(validIntent) ||
-        !value.outbox || !Object.values(value.outbox).every(validIntent) ||
+        !value.outbox || typeof value.outbox !== 'object' || Array.isArray(value.outbox) ||
+        !Object.values(value.outbox).every(validIntent) ||
         key !== `${INTENT_QUEUE_PREFIX}${value.storeId}:${value.owner}`) return null;
     return value;
   } catch { return null; }
@@ -59,7 +60,13 @@ export class IntentPersistence {
   }
 
   persist(shard: IntentEnvelope) {
-    this.storage.setItem(this.key(shard), JSON.stringify(shard));
+    // Empty queues need no durable envelope. Keep the in-memory shard and its
+    // lifetime lock so a live tab can safely persist its next mutation.
+    if (!shard.journal.length && !Object.keys(shard.outbox).length) {
+      this.storage.removeItem(this.key(shard));
+    } else {
+      this.storage.setItem(this.key(shard), JSON.stringify(shard));
+    }
   }
 
   open(storeId: string): Promise<void> {
@@ -87,12 +94,19 @@ export class IntentPersistence {
       .filter((key): key is string => !!key && key.startsWith(INTENT_QUEUE_PREFIX) && key !== ownKey);
     for (const key of keys) {
       const saved = readEnvelope(this.storage, key);
-      if (!saved || saved.storeId !== storeId || (!saved.journal.length && !Object.keys(saved.outbox).length)) continue;
-      if (!this.locks) throw new Error('Transaksi luring lama tetap disimpan, tetapi perangkat ini belum mendukung pemulihan antrean yang aman.');
+      if (!saved || saved.storeId !== storeId) continue;
+      if (!this.locks) {
+        if (saved.journal.length || Object.keys(saved.outbox).length) throw new Error('Transaksi luring lama tetap disimpan, tetapi perangkat ini belum mendukung pemulihan antrean yang aman.');
+        continue;
+      }
       if (!await this.claim(key)) continue;
       // Re-read only after the exclusive lock: a closing tab may have just saved.
       const latest = readEnvelope(this.storage, key);
       if (!latest || latest.storeId !== storeId) continue;
+      if (!latest.journal.length && !Object.keys(latest.outbox).length) {
+        this.persist(latest);
+        continue;
+      }
       this.shards.set(key, latest);
     }
     for (const queue of this.queues(storeId)) this.drain(queue, queue.journal);

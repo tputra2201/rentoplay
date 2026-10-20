@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Bersihkan antrean kosong saat aplikasi dibuka dan setelah pengiriman, tanpa menghapus pekerjaan tab aktif atau transaksi tertunda; verifikasi regresi dan tutup–buka aplikasi.
+
 - [x] Antrean transaksi luring tersimpan per toko dan dipulihkan dengan penguncian eksklusif setelah tutup–buka; journal/outbox dipindahkan atomik, antrean lama tanpa identitas tetap ditahan. Tes regresi dan uji akun aktif: tambah pelanggan luring, buka jendela baru, sambungkan internet, baca kembali dari pusat, hapus data uji. Publikasi tetap menunggu perintah pengguna.
 
 - [x] Volume dan HDMI selalu terlihat di panel Station, status dibaca otomatis; kontrol daya tidak diubah. Lima tes lulus, build OK; akun aktif teruji dengan bridge simulasi (volume 35→36, HDMI 2), desktop/mobile tanpa error. Uji TV fisik menunggu perangkat pengguna.
