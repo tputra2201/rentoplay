@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Antrean kosong dihapus setelah pengiriman dan antrean kosong lama dibersihkan dengan lock + baca ulang; transaksi tertunda, tab aktif, toko lain, dan data rusak tetap dipertahankan. 26 tes lulus; akun aktif: 20 antrean kosong lama terhapus dan tiga kali reload tidak menyimpan antrean kosong baru. Belum dipublikasikan.
+
 - [x] Antrean transaksi luring tersimpan per toko dan dipulihkan dengan penguncian eksklusif setelah tutup–buka; journal/outbox dipindahkan atomik, antrean lama tanpa identitas tetap ditahan. Tes regresi dan uji akun aktif: tambah pelanggan luring, buka jendela baru, sambungkan internet, baca kembali dari pusat, hapus data uji. Publikasi tetap menunggu perintah pengguna.
 
 - [x] Volume dan HDMI selalu terlihat di panel Station, status dibaca otomatis; kontrol daya tidak diubah. Lima tes lulus, build OK; akun aktif teruji dengan bridge simulasi (volume 35→36, HDMI 2), desktop/mobile tanpa error. Uji TV fisik menunggu perangkat pengguna.
