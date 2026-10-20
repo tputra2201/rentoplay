@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Bersihkan antrean kosong saat aplikasi dibuka dan setelah pengiriman, tanpa menghapus pekerjaan tab aktif atau transaksi tertunda; verifikasi regresi dan tutup–buka aplikasi.
+- [x] Antrean kosong dihapus setelah pengiriman dan antrean kosong lama dibersihkan dengan lock + baca ulang; transaksi tertunda, tab aktif, toko lain, dan data rusak tetap dipertahankan. 26 tes lulus; akun aktif: 20 antrean kosong lama terhapus dan tiga kali reload tidak menyimpan antrean kosong baru. Belum dipublikasikan.
 
 - [x] Antrean transaksi luring tersimpan per toko dan dipulihkan dengan penguncian eksklusif setelah tutup–buka; journal/outbox dipindahkan atomik, antrean lama tanpa identitas tetap ditahan. Tes regresi dan uji akun aktif: tambah pelanggan luring, buka jendela baru, sambungkan internet, baca kembali dari pusat, hapus data uji. Publikasi tetap menunggu perintah pengguna.
 
