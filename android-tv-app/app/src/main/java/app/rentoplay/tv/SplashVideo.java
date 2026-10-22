@@ -10,19 +10,20 @@ import java.io.File;
 
 /** Texture-backed playback: no separate SurfaceView layer can fall behind HDMI. */
 final class SplashVideo extends TextureView implements TextureView.SurfaceTextureListener {
+    interface PlaybackGate { boolean allowed(); }
     private final File file;
     private final boolean muted;
-    private final java.util.function.BooleanSupplier allowed;
+    private final PlaybackGate allowed;
     private MediaPlayer player;
     private Surface surface;
     private boolean closed;
-    SplashVideo(Context context, File file, boolean muted, java.util.function.BooleanSupplier allowed) {
+    SplashVideo(Context context, File file, boolean muted, PlaybackGate allowed) {
         super(context);
         this.file = file; this.muted = muted; this.allowed = allowed;
         setSurfaceTextureListener(this);
     }
     @Override public void onSurfaceTextureAvailable(SurfaceTexture texture, int width, int height) {
-        if (closed || !allowed.getAsBoolean()) return;
+        if (closed || !allowed.allowed()) return;
         try {
             surface = new Surface(texture);
             MediaPlayer mp = new MediaPlayer(); player = mp;
@@ -30,11 +31,12 @@ final class SplashVideo extends TextureView implements TextureView.SurfaceTextur
             mp.setDataSource(file.getAbsolutePath());
             mp.setLooping(true); mp.setVolume(muted ? 0f : 1f, muted ? 0f : 1f);
             mp.setOnPreparedListener(ready -> {
-                if (closed || player != ready || !allowed.getAsBoolean()) { stop(); return; }
+                if (player != ready) return; // Already released: never stop a newer surface's player.
+                if (closed || !allowed.allowed()) { stop(); return; }
                 fit(ready); ready.start();
             });
-            mp.setOnVideoSizeChangedListener((ready, w, h) -> fit(ready));
-            mp.setOnErrorListener((failed, what, extra) -> { stop(); return true; });
+            mp.setOnVideoSizeChangedListener((ready, w, h) -> { if (player == ready) fit(ready); });
+            mp.setOnErrorListener((failed, what, extra) -> { if (player == failed) stop(); return true; });
             mp.prepareAsync();
         } catch (Exception e) { stop(); android.util.Log.w("RenToPlayTV", "Video splash gagal", e); }
     }

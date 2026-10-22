@@ -60,12 +60,14 @@ public final class OverlayService extends Service {
     private static View current;
     private ServerSocket server;
     private static View splashView;
-    private static SplashState splashState = new SplashState(false);
-    private final Runnable screenCheck = new Runnable() {
+    private static final SplashState splashState = new SplashState(false);
+    private static Context serviceContext;
+    private static final Runnable screenCheck = new Runnable() {
         @Override public void run() {
-            boolean on = screenInteractive(OverlayService.this);
+            if (serviceContext == null || !splashState.locked()) return;
+            boolean on = screenInteractive(serviceContext);
             if (!on) { splashState.screenOff(); removeSplashNow(); }
-            MAIN.postDelayed(this, 1000);
+            if (splashState.locked()) MAIN.postDelayed(this, 1000);
         }
     };
     private final BroadcastReceiver screenReceiver = new BroadcastReceiver() {
@@ -117,8 +119,8 @@ public final class OverlayService extends Service {
         filter.addAction(Intent.ACTION_SCREEN_OFF);
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(screenReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
         else registerReceiver(screenReceiver, filter);
-        splashState = new SplashState(screenInteractive(this));
-        MAIN.post(screenCheck);
+        serviceContext = getApplicationContext();
+        splashState.release(); removeSplashNow();
         showWelcome(this);
     }
 
@@ -128,7 +130,8 @@ public final class OverlayService extends Service {
         try { if (server != null) server.close(); } catch (Exception ignored) { }
         unregisterReceiver(screenReceiver);
         MAIN.removeCallbacks(screenCheck);
-        dismissSplash();
+        serviceContext = null;
+        splashState.release(); removeSplashNow();
         super.onDestroy();
     }
 
@@ -357,6 +360,8 @@ public final class OverlayService extends Service {
             splashState.screenOn();
             int ticket = splashState.request(controlPrefs(app).getBoolean("enabled", false));
             if (ticket < 0) { restoreSplashFocus(); return; }
+            MAIN.removeCallbacks(screenCheck);
+            MAIN.postDelayed(screenCheck, 1000);
             new Thread(() -> loadWelcome(app, ticket), "rtp-welcome").start();
         });
     }
