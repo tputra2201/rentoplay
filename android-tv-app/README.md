@@ -2,6 +2,14 @@
 
 Dipasang di setiap TV. Menampilkan kartu notifikasi di atas layar PS (HDMI).
 
+## Pembaruan 1.6.1 — siklus video splash
+
+Pemutar TextureView menggantikan VideoView agar video tidak memakai lapisan SurfaceView terpisah. SCREEN_OFF menghentikan dan melepas pemutar beserta audio; SCREEN_ON membuat pemutar baru dari MP4 lokal. Pemeriksaan status layar setiap detik menjadi cadangan bila broadcast terlambat. Pelepasan kasir/pola membatalkan pemuatan yang masih tertunda, tanpa mengubah billing.
+
+Selama splash terkunci, Home/HDMI dari kasir meminta Release Splash dahulu. Aktifkan ulang layanan **RenToPlay TV — Standby** di Aksesibilitas setelah memasang APK agar filter Home/input sistem dan pemulihan fokus saat pindah aplikasi tersedia. Pola arah/OK, volume dan power tetap tersedia. Aplikasi tidak membaca isi layar.
+
+Pembatasan ini **bukan pengunci hardware**: firmware dapat memproses HDMI-CEC, remote input atau permukaan HDMI di luar Android/overlay. Jika hanya televisi dimatikan tetapi STB tetap menyala, Android STB mungkin tidak menerima SCREEN_OFF sehingga Companion tidak mengetahui TV mati. Uji fisik wajib: nyala dari Home, nyala dari HDMI, PS membangunkan TV, standby saat video bersuara, Home/input selama splash, pola salah/benar dan Release kasir. APK Kasir tidak perlu dibuild ulang. Build APK TV dengan kunci lama untuk pembaruan tanpa uninstall.
+
 Versi 1.5.1 memperbaiki perintah bangun layar (izin WAKE_LOCK dan penahanan wake lock) yang sebelumnya gagal diam-diam. Versi 1.5.0 menambah perintah bangun layar dari dalam jaringan (dipakai saat Wake-on-LAN diblokir router Wi-Fi), pengaturan TV global sekali isi untuk semua unit, dan daftar station accordion di kasir. Pola remote 4–6 tombol arah/OK, volume, Home/HDMI, standby opsional dan layar waktu habis hitam pekat tetap tersedia. Release Splash tidak memulai billing/timer.
 Build ulang dan pasang APK pembaruan di setiap TV. Overlay hanya menutupi gambar, tidak memutus HDMI atau mengunci konsol.
 Untuk logo tajam/transparan, unggah ulang PNG transparan beresolusi tinggi melalui Data Store; tersedia pilihan hapus latar polos.

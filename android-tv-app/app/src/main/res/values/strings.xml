@@ -1,3 +1,3 @@
 <resources>
-    <string name="power_service_description">Mengizinkan perintah standby dari kasir RenToPlay. Tidak membaca isi layar.</string>
+    <string name="power_service_description">Mengizinkan standby dari kasir dan membatasi tombol Home/input selama splash terkunci. Mendeteksi perpindahan aplikasi tanpa membaca isi layar. Dukungan bergantung perangkat TV.</string>
 </resources>
