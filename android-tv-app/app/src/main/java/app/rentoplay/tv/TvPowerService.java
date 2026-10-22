@@ -22,25 +22,7 @@ public final class TvPowerService extends AccessibilityService {
         OverlayService.restoreSplashFocus();
     }
     @Override protected boolean onKeyEvent(KeyEvent event) {
-        if (!OverlayService.splashLocked()) return false;
-        switch (event.getKeyCode()) {
-            case KeyEvent.KEYCODE_HOME:
-            case KeyEvent.KEYCODE_MENU:
-            case KeyEvent.KEYCODE_APP_SWITCH:
-            case KeyEvent.KEYCODE_TV_INPUT:
-            case KeyEvent.KEYCODE_TV_INPUT_HDMI_1:
-            case KeyEvent.KEYCODE_TV_INPUT_HDMI_2:
-            case KeyEvent.KEYCODE_TV_INPUT_HDMI_3:
-            case KeyEvent.KEYCODE_TV_INPUT_HDMI_4:
-            case KeyEvent.KEYCODE_TV_INPUT_COMPONENT_1:
-            case KeyEvent.KEYCODE_TV_INPUT_COMPONENT_2:
-            case KeyEvent.KEYCODE_TV_INPUT_COMPOSITE_1:
-            case KeyEvent.KEYCODE_TV_INPUT_COMPOSITE_2:
-            case KeyEvent.KEYCODE_TV_INPUT_VGA_1:
-            case KeyEvent.KEYCODE_WINDOW:
-                return true;
-            default: return false; // Pattern, power and volume still reach the TV/overlay.
-        }
+        return SplashRemoteKeys.blocked(OverlayService.splashLocked(), event.getKeyCode());
     }
     @Override public void onInterrupt() { }
     static boolean standby() {
