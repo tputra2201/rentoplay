@@ -14,7 +14,7 @@
 - Company Report totals period-filtered incoming PAY-IN independently of later deposit use; test aggregation separately. Why: later check-in must not erase earlier receipts.
 - Per-store module toggles and SALES labels live in the synced setting businessProfile; nav/route access checks businessProfile.modules — so each store can switch off Kafe/Reservasi/Playing Card.
 - Station ordering uses stationModuleAccess for Cafe entry points; existing bills and rental add-ons stay accessible when Cafe is disabled, so module changes do not alter financial history.
-- Sync only explicit mutations, never hydration/storage/remote reads. Store-scoped journal+outbox shards persist atomically; empty shards are removed, and old same-store shards require a lifetime Web Lock and fresh read before recovery or cleanup. Pull before push; withhold unscoped legacy queues. Why: preserve offline work without cross-tab/store overwrite or idle storage growth.
+- Sync explicit mutations only, never hydration/reads. Atomic store-scoped journal/outbox shards: remove empties, recover/clean old same-store shards only with lifetime Web Lock + fresh read. Pull before push; withhold unscoped legacy queues. Why: protect offline work across tabs/stores.
 - Store writes use store_apply_intents: membership/base checks, linked atomic commits, visible conflicts, no legacy direct writes or resurrection of retired sessions/closed shifts. Why: prevent multi-cashier/VOID overwrites.
 - `PaymentSplit.at` records receipt time; `shiftSummary` counts cash by it. Why: later bill closure must not move money between shifts.
 - Closing a shift freezes its final figures into `CashShift.snapshot`; closed-shift reports read the snapshot and never recompute.
@@ -26,7 +26,7 @@
 - TV controls use async native LAN, per-TV tokens, salted unlock hashes/legacy PINs, subnet WoL, no guessed Cast endpoints. Volume/HDMI auto-read discovered inputs; standby requires accessibility. Why: firmware varies.
 - Splash uses TextureView/local MediaPlayer, main-thread generation gates and SCREEN_OFF teardown; optional accessibility filters Home/input and restores focus without resetting unlock attempts. Why: stop standby audio and stale callbacks; OEM HDMI/CEC restrictions remain best-effort.
 - Android WebView file inputs use WebChromeClient's activity-result callback with content URI access, while file-system access remains disabled; otherwise uploads cannot open the system picker.
-- TV overlays accept store logos as image data URIs as well as HTTP URLs, and HTTP bodies are read by byte length; store uploads are embedded images and Unicode text must not stall requests.
+- TV overlays accept image data URIs/HTTP logos; HTTP bodies use byte lengths. Why: embedded logos and Unicode must work.
 - Successful store branding updates dispatch `rentoplay:store-info-updated` for every useStoreInfo consumer to refresh; otherwise notification schedules keep stale branding until app restart.
 - Station Release dismisses only its configured TV overlay, never billing or session state; expiry eligibility and dispatch are tested in tests/tv-notify.test.js.
 - Notification configuration keeps legacy message strings alongside optional structured lines and per-stage titles; Android forwards resolved titles/messages so older configurations remain valid.
