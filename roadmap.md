@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] Companion 1.6.1: TextureView + pemutar lokal, stop audio/video saat SCREEN_OFF, pemutar baru saat SCREEN_ON, pembatalan callback lama, filter Home/input opsional dan pemulihan fokus. 14 tes web + 10 aturan JVM (21 kasus tombol) lulus, source Android API35 terkompilasi, XML valid.
+- [ ] Build/install Companion 1.6.1 dengan kunci lama, aktifkan ulang Aksesibilitas, uji standby bersuara/nyala Home/HDMI/PS-CEC dan Release/pola — membutuhkan TV pengguna; HDMI hardware dan TV mati sementara STB hidup dapat melewati kontrol Android. APK Kasir tidak perlu dibuild ulang.
+
 - [x] Antrean kosong dihapus setelah pengiriman dan antrean kosong lama dibersihkan dengan lock + baca ulang; transaksi tertunda, tab aktif, toko lain, dan data rusak tetap dipertahankan. 26 tes lulus; akun aktif: 20 antrean kosong lama terhapus dan tiga kali reload tidak menyimpan antrean kosong baru. Belum dipublikasikan.
 
 - [x] Antrean transaksi luring tersimpan per toko dan dipulihkan dengan penguncian eksklusif setelah tutup–buka; journal/outbox dipindahkan atomik, antrean lama tanpa identitas tetap ditahan. Tes regresi dan uji akun aktif: tambah pelanggan luring, buka jendela baru, sambungkan internet, baca kembali dari pusat, hapus data uji. Publikasi tetap menunggu perintah pengguna.

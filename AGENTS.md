@@ -9,23 +9,24 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-- Financial screens use one shared vocabulary: Revenue, Payments, Pay-In, Pay-Out, Cash In/Out, Cash Expected/Actual, Balance Cash, and Next Start Cash, so cashier and owner figures reconcile.
+- Financial vocabulary: Revenue, Payments, Pay-In, Pay-Out, Cash In/Out, Cash Expected/Actual, Balance Cash, Next Start Cash. Why: reconcile cashier/owner figures.
 - Cash items carry a standard account (sales/other/payin/expense/payout) and automatic modules resolve their item via Account Mapping (mapFor + entry.source); reports must read entryAccount/entrySource, never hardcoded category ids — so stores can name their own COA.
 - Company Report totals period-filtered incoming PAY-IN independently of later deposit use; test aggregation separately. Why: later check-in must not erase earlier receipts.
 - Per-store module toggles and SALES labels live in the synced setting businessProfile; nav/route access checks businessProfile.modules — so each store can switch off Kafe/Reservasi/Playing Card.
 - Station ordering uses stationModuleAccess for Cafe entry points; existing bills and rental add-ons stay accessible when Cafe is disabled, so module changes do not alter financial history.
-- Sync only explicit mutations, never hydration/storage/remote reads. Store-scoped journal+outbox shards persist atomically; empty shards are removed, and old same-store shards require a lifetime Web Lock and fresh read before recovery or cleanup. Pull before push; withhold unscoped legacy queues. Why: preserve offline work without cross-tab/store overwrite or idle storage growth.
-- Store writes use the atomic store_apply_intents RPC with membership checks and expected base payload comparison; linked entities commit together, conflicting actions yield to central data with a visible warning, and authenticated legacy direct writes are rejected. Retired station/table sessions and closed shifts cannot be resurrected. Why: two cashiers or a remote VOID must not silently overwrite each other.
+- Sync explicit mutations only, never hydration/reads. Atomic store-scoped journal/outbox shards: remove empties, recover/clean old same-store shards only with lifetime Web Lock + fresh read. Pull before push; withhold unscoped legacy queues. Why: protect offline work across tabs/stores.
+- Store writes use store_apply_intents: membership/base checks, linked atomic commits, visible conflicts, no legacy direct writes or resurrection of retired sessions/closed shifts. Why: prevent multi-cashier/VOID overwrites.
 - `PaymentSplit.at` records receipt time; `shiftSummary` counts cash by it. Why: later bill closure must not move money between shifts.
 - Closing a shift freezes its final figures into `CashShift.snapshot`; closed-shift reports read the snapshot and never recompute.
 - Nullable component props use a null-check wrapper around a non-null body; never return before hooks. Why: closing StationDialog must not change hook count.
-- Thermal print transports share document-specific spacing and feed-to-cut in `thermalCutText`; cutter capability has an explicit printer override independent of paper width, and Android must not feed after supplied cut commands. Why: narrow paper can be used in roll cutters and the last printed line must reach the knife before cutting; sticker printers remain opt-out.
+- Thermal transports share thermalCutText spacing/feed-to-cut; cutter override is independent of width, Android never feeds after supplied cuts, stickers opt out. Why: the last line must reach the knife even on narrow roll cutters.
 - TV reminders go kasir Android app (`RenToPlayTV` JS bridge → AlarmManager) → `android-tv-app` companion HTTP :8765; per-unit TV IPs live in device localStorage. Why: browser timers freeze in background and HTTPS pages cannot call LAN http.
-- Native TV alarms store logos in private per-session preferences and carry only a reference in PendingIntent; the receiver restores images on its worker. Why: large images exceed Android Binder limits and can prevent every reminder from being scheduled.
+- Native TV alarm logos stay in private session preferences; PendingIntent carries references restored by the worker. Why: avoid Binder limits.
 - TV display control is provided by native Companion via Station settings, not a browser display route, so Setup has no duplicate legacy Connect feature.
-- TV controls use an async native LAN bridge, per-TV token and salted unlock hashes preserving legacy PINs. WoL uses matching-subnet broadcasts; never guess Cast endpoints. Standby needs accessibility; always-visible volume/HDMI controls auto-read status and use discovered inputs only. Why: firmware capabilities vary.
+- TV controls use async native LAN, per-TV tokens, salted unlock hashes/legacy PINs, subnet WoL, no guessed Cast endpoints. Volume/HDMI auto-read discovered inputs; standby requires accessibility. Why: firmware varies.
+- Splash uses TextureView/local MediaPlayer, main-thread generation gates and SCREEN_OFF teardown; optional accessibility filters Home/input and restores focus without resetting unlock attempts. Why: stop standby audio and stale callbacks; OEM HDMI/CEC restrictions remain best-effort.
 - Android WebView file inputs use WebChromeClient's activity-result callback with content URI access, while file-system access remains disabled; otherwise uploads cannot open the system picker.
-- TV overlays accept store logos as image data URIs as well as HTTP URLs, and HTTP bodies are read by byte length; store uploads are embedded images and Unicode text must not stall requests.
+- TV overlays accept image data URIs/HTTP logos; HTTP bodies use byte lengths. Why: embedded logos and Unicode must work.
 - Successful store branding updates dispatch `rentoplay:store-info-updated` for every useStoreInfo consumer to refresh; otherwise notification schedules keep stale branding until app restart.
 - Station Release dismisses only its configured TV overlay, never billing or session state; expiry eligibility and dispatch are tested in tests/tv-notify.test.js.
 - Notification configuration keeps legacy message strings alongside optional structured lines and per-stage titles; Android forwards resolved titles/messages so older configurations remain valid.

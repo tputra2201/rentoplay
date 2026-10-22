@@ -35,7 +35,6 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.VideoView;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -61,11 +60,29 @@ public final class OverlayService extends Service {
     private static View current;
     private ServerSocket server;
     private static View splashView;
-    private final BroadcastReceiver screenReceiver = new BroadcastReceiver() {
-        @Override public void onReceive(Context c, Intent i) {
-            if (Intent.ACTION_SCREEN_ON.equals(i.getAction())) new Thread(() -> showWelcome(c)).start();
+    private static final SplashState splashState = new SplashState(false);
+    private static Context serviceContext;
+    private static final Runnable screenCheck = new Runnable() {
+        @Override public void run() {
+            if (serviceContext == null || !splashState.locked()) return;
+            boolean on = screenInteractive(serviceContext);
+            if (!on) { splashState.screenOff(); removeSplashNow(); }
+            if (splashState.locked()) MAIN.postDelayed(this, 1000);
         }
     };
+    private final BroadcastReceiver screenReceiver = new BroadcastReceiver() {
+        @Override public void onReceive(Context c, Intent i) {
+            if (Intent.ACTION_SCREEN_OFF.equals(i.getAction())) {
+                splashState.screenOff(); removeSplashNow();
+            } else if (Intent.ACTION_SCREEN_ON.equals(i.getAction())) {
+                splashState.screenOn(); showWelcome(c);
+            }
+        }
+    };
+    private static boolean screenInteractive(Context c) {
+        android.os.PowerManager pm = (android.os.PowerManager) c.getSystemService(POWER_SERVICE);
+        return pm != null && pm.isInteractive();
+    }
     static SharedPreferences controlPrefs(Context c) { return c.getSharedPreferences("rentoplay.tv-control", MODE_PRIVATE); }
     static synchronized String controlToken(Context c) {
         SharedPreferences p = controlPrefs(c);
@@ -99,9 +116,12 @@ public final class OverlayService extends Service {
         else startForeground(1, n);
         new Thread(this::serve, "rtp-server").start();
         IntentFilter filter = new IntentFilter(Intent.ACTION_SCREEN_ON);
+        filter.addAction(Intent.ACTION_SCREEN_OFF);
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(screenReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
         else registerReceiver(screenReceiver, filter);
-        new Thread(() -> showWelcome(this)).start();
+        serviceContext = getApplicationContext();
+        splashState.release(); removeSplashNow();
+        showWelcome(this);
     }
 
     @Override public int onStartCommand(Intent i, int f, int id) { return START_STICKY; }
@@ -109,7 +129,9 @@ public final class OverlayService extends Service {
     @Override public void onDestroy() {
         try { if (server != null) server.close(); } catch (Exception ignored) { }
         unregisterReceiver(screenReceiver);
-        dismissSplash();
+        MAIN.removeCallbacks(screenCheck);
+        serviceContext = null;
+        splashState.release(); removeSplashNow();
         super.onDestroy();
     }
 
@@ -249,10 +271,12 @@ public final class OverlayService extends Service {
                     int percent = Math.max(0, Math.min(100, j.optInt("value")));
                     audio.setStreamVolume(AudioManager.STREAM_MUSIC, Math.round(audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC) * percent / 100f), 0);
                 } else if (action.equals("home")) {
+                    if (splashLocked()) throw new IllegalStateException("Release Splash terlebih dahulu.");
                     startActivity(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
                 } else if (action.equals("standby")) {
                     if (!TvPowerService.standby()) throw new IllegalStateException("Aktifkan RenToPlay TV — Standby di pengaturan Aksesibilitas TV. TV harus mendukung kunci layar.");
                 } else if (action.equals("input")) {
+                    if (splashLocked()) throw new IllegalStateException("Release Splash terlebih dahulu.");
                     TvInputManager manager = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
                     String id = j.optString("inputId"); boolean found = false;
                     for (TvInputInfo info : manager.getTvInputList()) if (info.getId().equals(id)) found = true;
@@ -274,14 +298,30 @@ public final class OverlayService extends Service {
         MAIN.post(task); return task.get(5, java.util.concurrent.TimeUnit.SECONDS);
     }
 
-    private static VideoView splashPlayer;
+    private static SplashVideo splashPlayer;
 
     static void dismissSplash() {
-        MAIN.post(() -> { if (splashView == null) return;
-            try { if (splashPlayer != null) { splashPlayer.stopPlayback(); splashPlayer = null; } } catch (Exception ignored) { }
+        MAIN.post(() -> { splashState.release(); removeSplashNow(); });
+    }
+
+    private static void removeSplashNow() {
+        if (splashPlayer != null) { splashPlayer.close(); splashPlayer = null; }
+        if (splashView != null) {
             try { ((WindowManager) splashView.getContext().getSystemService(WINDOW_SERVICE)).removeView(splashView); } catch (Exception ignored) { }
             splashView = null;
-        });
+        }
+    }
+
+    static boolean splashLocked() { return splashState.locked(); }
+
+    /** Refresh overlay focus without replacing the player or resetting unlock attempts. */
+    static void restoreSplashFocus() {
+        if (!splashLocked() || splashView == null) return;
+        try {
+            WindowManager wm = (WindowManager) splashView.getContext().getSystemService(WINDOW_SERVICE);
+            wm.updateViewLayout(splashView, splashView.getLayoutParams());
+            splashView.requestFocus();
+        } catch (Exception ignored) { }
     }
 
     /** Unduh video splash sekali ke memori TV; diputar dari berkas lokal agar lancar tanpa internet. */
@@ -314,8 +354,20 @@ public final class OverlayService extends Service {
     }
 
     static void showWelcome(Context ctx) {
+        Context app = ctx.getApplicationContext();
+        MAIN.post(() -> {
+            if (!screenInteractive(app)) { splashState.screenOff(); removeSplashNow(); return; }
+            splashState.screenOn();
+            int ticket = splashState.request(controlPrefs(app).getBoolean("enabled", false));
+            if (ticket < 0) { restoreSplashFocus(); return; }
+            MAIN.removeCallbacks(screenCheck);
+            MAIN.postDelayed(screenCheck, 1000);
+            new Thread(() -> loadWelcome(app, ticket), "rtp-welcome").start();
+        });
+    }
+
+    private static void loadWelcome(Context ctx, int ticket) {
         SharedPreferences p = controlPrefs(ctx);
-        if (!p.getBoolean("enabled", false)) return;
         Bitmap decoded = null;
         String logo = p.getString("logo", "");
         try {
@@ -331,17 +383,15 @@ public final class OverlayService extends Service {
         final File videoFile = new File(ctx.getFilesDir(), "splash.mp4");
         final boolean useVideo = !p.getString("videoUrl", "").isEmpty() && videoFile.exists() && videoFile.length() > 0;
         MAIN.post(() -> {
-            if (splashView != null || !Settings.canDrawOverlays(ctx)) return;
+            if (!splashState.accepts(ticket)) return;
+            if (!screenInteractive(ctx) || !Settings.canDrawOverlays(ctx)) {
+                splashState.release(); removeSplashNow(); return;
+            }
             FrameLayout box = new FrameLayout(ctx);
             box.setBackgroundColor(Color.rgb(11, 15, 26));
             if (useVideo) {
-                final VideoView vv = new VideoView(ctx);
-                vv.setVideoURI(Uri.fromFile(videoFile));
-                vv.setOnPreparedListener(mp -> {
-                    mp.setLooping(true);
-                    if (p.getBoolean("videoMuted", true)) mp.setVolume(0f, 0f);
-                    vv.start();
-                });
+                final SplashVideo vv = new SplashVideo(ctx, videoFile, p.getBoolean("videoMuted", true),
+                        () -> splashState.accepts(ticket) && screenInteractive(ctx));
                 box.addView(vv, new FrameLayout.LayoutParams(-1, -1, Gravity.CENTER));
                 splashPlayer = vv;
             } else {
@@ -379,7 +429,8 @@ public final class OverlayService extends Service {
             });
             int type = Build.VERSION.SDK_INT >= 26 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
             WindowManager.LayoutParams lp = new WindowManager.LayoutParams(-1, -1, type, WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN, PixelFormat.TRANSLUCENT);
-            try { ((WindowManager) ctx.getSystemService(WINDOW_SERVICE)).addView(box, lp); splashView = box; box.requestFocus(); } catch (Exception e) { android.util.Log.w("RenToPlayTV", "Splash not supported", e); }
+            try { ((WindowManager) ctx.getSystemService(WINDOW_SERVICE)).addView(box, lp); splashView = box; box.requestFocus(); }
+            catch (Exception e) { splashState.release(); if (splashPlayer != null) { splashPlayer.close(); splashPlayer = null; } android.util.Log.w("RenToPlayTV", "Splash not supported", e); }
         });
     }
 
