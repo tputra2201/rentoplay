@@ -50,7 +50,6 @@ async function recoverSession(): Promise<boolean> {
 }
 
 
-const LEGACY_OUTBOX_KEY = "billing-sync-outbox-v1";
 const SHADOW_KEY = "billing-sync-shadow-v1";
 const SINCE_KEY = "billing-sync-since-v1";
 const STORE_KEY = "billing-sync-store-v1";
@@ -263,14 +262,8 @@ export function useStoreSync(options: {
   // Muat antrean & bayangan dari perangkat.
   useEffect(() => {
     shadowRef.current = readJson<Shadow>(SHADOW_KEY, {});
-    // Old unscoped queues have no provable store identity. Keep them untouched.
-    const hasLegacy = Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i))
-      .some(key => {
-        if (!key || (key !== LEGACY_OUTBOX_KEY && !/^billing-intents-.+-(outbox|journal)$/.test(key))) return false;
-        const value = readJson<unknown>(key, null);
-        return !!value && typeof value === 'object' && Object.keys(value).length > 0;
-      });
-    if (hasLegacy) toast.warning('Antrean lama tanpa identitas toko tetap disimpan untuk pemeriksaan; tidak dikirim otomatis.', { duration: 15000 });
+    // Unscoped legacy queues remain untouched and withheld from sync.
+    // Do not scan device storage or interrupt every startup with a warning.
     setOnline(typeof navigator === "undefined" ? true : navigator.onLine);
     loadedRef.current = true;
   }, []);
