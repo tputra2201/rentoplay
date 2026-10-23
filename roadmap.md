@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Notifikasi antrean lama dan pemindaian pemicunya dihapus; pemeriksaan identitas jaringan berulang diganti sesi lokal dengan pemeriksaan membership pusat tetap aktif. 27 tes lulus; dashboard akun aktif dan reload tanpa notifikasi teruji, antrean lama tetap utuh. Pesan koneksi diperjelas dan klasifikasinya lulus tes; tampilan pesan gagal masuk belum terverifikasi lewat browser. Belum dipublikasikan.
+
 - [x] Companion 1.6.1: TextureView + pemutar lokal, stop audio/video saat SCREEN_OFF, pemutar baru saat SCREEN_ON, pembatalan callback lama, filter Home/input opsional dan pemulihan fokus. 14 tes web + 10 aturan JVM (21 kasus tombol) lulus, source Android API35 terkompilasi, XML valid.
 - [ ] Build/install Companion 1.6.1 dengan kunci lama, aktifkan ulang Aksesibilitas, uji standby bersuara/nyala Home/HDMI/PS-CEC dan Release/pola — membutuhkan TV pengguna; HDMI hardware dan TV mati sementara STB hidup dapat melewati kontrol Android. APK Kasir tidak perlu dibuild ulang.
 

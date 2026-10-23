@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Copy, Joystick, LockKeyhole, LogIn, MailQuestion } from "lucide-react";
 import { passwordSetupUrl } from "@/lib/app-url";
+import { isAuthConnectionError } from "@/lib/auth-errors";
 import { deviceCode, takeDeviceReject, type DeviceReject } from "@/lib/device-guard";
 import {
   Dialog,
@@ -131,9 +132,7 @@ function AuthPage() {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/", replace: true });
-    });
+    // INITIAL_SESSION also handles users who are already signed in.
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       if (session) navigate({ to: "/", replace: true });
     });
@@ -150,7 +149,9 @@ function AuthPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Terjadi kesalahan";
       toast.error(
-        message.includes("Invalid login credentials")
+        isAuthConnectionError(err)
+          ? "Tidak dapat terhubung. Periksa koneksi internet, lalu coba masuk kembali."
+          : message.includes("Invalid login credentials")
           ? "Email atau kata sandi salah"
           : message,
       );
