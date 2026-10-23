@@ -308,9 +308,11 @@ export function useStoreSync(options: {
     };
     (async () => {
       try {
-        const { data: auth, error: authError } = await supabase.auth.getUser();
+        // Reuse the local session; the membership query still verifies access
+        // in the cloud. Avoid an extra identity round-trip on every startup.
+        const { data: auth, error: authError } = await supabase.auth.getSession();
         if (authError) throw authError;
-        const userId = auth.user?.id;
+        const userId = auth.session?.user.id;
         if (!userId) return;
         const { data, error: memberError } = await supabase
           .from("store_members")
