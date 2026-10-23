@@ -36,6 +36,13 @@
       "when": 1792386968700,
       "tag": "0004_tv_splash_bucket_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792738939667,
+      "tag": "0005_allow_verified_active_session_transfers",
+      "breakpoints": true
     }
   ]
 }
