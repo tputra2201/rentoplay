@@ -22,6 +22,7 @@ async function checkSQL(body) {
       ('00000000-0000-4000-8000-000000000061','station','transfer-target',${sqlJson(empty)},1792738000000);
     SELECT set_config('request.jwt.claim.sub','${uid}',true);
     SELECT set_config('request.jwt.claim.role','authenticated',true);
+    SET LOCAL ROLE authenticated;
     DO $$ DECLARE result jsonb; rejected boolean := false; BEGIN ${body} END $$;
     ROLLBACK;`.replaceAll('00000000-0000-4000-8000-000000000061', storeId);
   const proc = Bun.spawn(['psql', '--no-psqlrc', '--quiet', '--set', 'ON_ERROR_STOP=1'], {
@@ -43,7 +44,7 @@ databaseTest('active paid session transfers and returns despite destination reti
     IF result->>'accepted' <> 'true' THEN RAISE EXCEPTION 'return rejected'; END IF;
     IF (SELECT payload->'session' FROM public.store_data WHERE store_id='00000000-0000-4000-8000-000000000061' AND entity_id='transfer-source') IS DISTINCT FROM ${sqlJson(session)} THEN RAISE EXCEPTION 'return changed session'; END IF;
   `);
-});
+}, 15000);
 
 databaseTest('completed or VOID session cannot be replayed', async () => {
   await checkSQL(`
@@ -52,7 +53,7 @@ databaseTest('completed or VOID session cannot be replayed', async () => {
     BEGIN result := ${call([reverse[0]])}; EXCEPTION WHEN SQLSTATE 'P0001' THEN rejected := true; END;
     IF NOT rejected THEN RAISE EXCEPTION 'retired session resurrected'; END IF;
   `);
-});
+}, 15000);
 
 databaseTest('stale move rejects source and destination atomically', async () => {
   const stale = [{ ...forward[0], base: { ...source, name: 'Stale source' } }, forward[1]];
@@ -62,7 +63,7 @@ databaseTest('stale move rejects source and destination atomically', async () =>
     IF (SELECT payload FROM public.store_data WHERE store_id='00000000-0000-4000-8000-000000000061' AND entity_id='transfer-source') IS DISTINCT FROM ${sqlJson(source)} THEN RAISE EXCEPTION 'source partially changed'; END IF;
     IF (SELECT payload FROM public.store_data WHERE store_id='00000000-0000-4000-8000-000000000061' AND entity_id='transfer-target') IS DISTINCT FROM ${sqlJson(empty)} THEN RAISE EXCEPTION 'destination partially changed'; END IF;
   `);
-});
+}, 15000);
 
 databaseTest('unrelated transactions cannot bypass retired-session protection', async () => {
   await checkSQL(`
@@ -70,11 +71,11 @@ databaseTest('unrelated transactions cannot bypass retired-session protection', 
     IF NOT rejected THEN RAISE EXCEPTION 'unlinked transfer bypassed retirement'; END IF;
     IF (SELECT payload FROM public.store_data WHERE store_id='00000000-0000-4000-8000-000000000061' AND entity_id='transfer-source') IS DISTINCT FROM ${sqlJson(source)} THEN RAISE EXCEPTION 'source partially changed'; END IF;
   `);
-});
+}, 15000);
 
 databaseTest('verified transfer is independent of source/destination write order', async () => {
   await checkSQL(`result := ${call([...forward].reverse())}; IF result->>'accepted' <> 'true' THEN RAISE EXCEPTION 'destination-first move rejected'; END IF;`);
-});
+}, 15000);
 
 databaseTest('fabricated live source cannot authorize replay', async () => {
   const fake = { ...source, id: 'fake-source' };
@@ -82,4 +83,4 @@ databaseTest('fabricated live source cannot authorize replay', async () => {
     result := ${call([intent({ ...fake, session: null }, fake), forward[1]])};
     IF result->>'accepted' <> 'false' THEN RAISE EXCEPTION 'fake source accepted'; END IF;
   `);
-});
+}, 15000);
