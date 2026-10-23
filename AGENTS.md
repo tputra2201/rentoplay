@@ -17,6 +17,7 @@
 - Sync explicit mutations only, never hydration/reads. Atomic store-scoped journal/outbox shards: remove empties, recover/clean old same-store shards only with lifetime Web Lock + fresh read. Pull before push; withhold unscoped legacy queues. Why: protect offline work across tabs/stores.
 - Startup reuses the local auth session for the cloud-enforced membership query; legacy unscoped queues remain withheld silently. Why: avoid redundant identity requests and recurring startup interruptions without weakening store isolation.
 - Store writes use store_apply_intents: membership/base checks, linked atomic commits, visible conflicts, no legacy direct writes or resurrection of retired sessions/closed shifts. Why: prevent multi-cashier/VOID overwrites.
+- Retirement exceptions require one centrally live source and one empty destination in the same base-validated atomic transaction; keep watermarks monotonic. Why: allow active sessions to move back without permitting completed-session replay.
 - `PaymentSplit.at` records receipt time; `shiftSummary` counts cash by it. Why: later bill closure must not move money between shifts.
 - Closing a shift freezes its final figures into `CashShift.snapshot`; closed-shift reports read the snapshot and never recompute.
 - Nullable component props use a null-check wrapper around a non-null body; never return before hooks. Why: closing StationDialog must not change hook count.

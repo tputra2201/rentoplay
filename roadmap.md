@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Perbaiki pindah Station yang kembali ke asal: bedakan transfer sesi aktif dari pengiriman ulang sesi selesai; uji pindah bolak-balik dan penolakan sesi VOID tanpa menyentuh transaksi operasional.
+
 - [x] Notifikasi antrean lama dan pemindaian pemicunya dihapus; pemeriksaan identitas jaringan berulang diganti sesi lokal dengan pemeriksaan membership pusat tetap aktif. 27 tes lulus; dashboard akun aktif dan reload tanpa notifikasi teruji, antrean lama tetap utuh. Pesan koneksi diperjelas dan klasifikasinya lulus tes; tampilan pesan gagal masuk belum terverifikasi lewat browser. Belum dipublikasikan.
 
 - [x] Companion 1.6.1: TextureView + pemutar lokal, stop audio/video saat SCREEN_OFF, pemutar baru saat SCREEN_ON, pembatalan callback lama, filter Home/input opsional dan pemulihan fokus. 14 tes web + 10 aturan JVM (21 kasus tombol) lulus, source Android API35 terkompilasi, XML valid.
