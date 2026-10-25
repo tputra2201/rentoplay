@@ -5,6 +5,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { OrderDraftDialog } from "@/components/OrderDraftDialog";
 import { TvControlPanel } from "@/components/TvControlPanel";
 import { stationModuleAccess } from "@/lib/station-module-access";
+import { releaseStationScreen } from "@/lib/tv-notify";
 import { VoidDialog } from "@/components/VoidDialog";
 import { PromoPicker } from "@/components/PromoPicker";
 
@@ -358,6 +359,7 @@ function StationDialogBody({
     const record = stopSession(station.id);
     setAutoEnd(false);
     if (!record) return;
+    releaseStationScreen(station.id);
     setWantPrint(false);
     onOpenChange(false);
     setPaidRecord(record);
@@ -470,7 +472,7 @@ function StationDialogBody({
       const part = Math.min(rest, due);
       if (part > 0) {
         settleSession(child.id, { payment: label, amount: part, amountPaid: part });
-        if (part + 0.5 >= due) stopSession(child.id);
+        if (part + 0.5 >= due && stopSession(child.id)) releaseStationScreen(child.id);
       }
       rest -= part;
     }
@@ -565,6 +567,8 @@ function StationDialogBody({
       });
       return;
     }
+    // Akhiri sesi selalu melepas layar penuh "Waktu habis" di TV, walau kasir lupa Release.
+    releaseStationScreen(station.id);
     onOpenChange(false);
     resetPaymentForm();
     setPaidRecord(record);
