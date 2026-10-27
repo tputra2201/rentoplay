@@ -1,4 +1,4 @@
-import { Gamepad2, Clock, Utensils, Infinity as InfinityIcon, Pause, PlayCircle, MonitorOff } from "lucide-react";
+import { Gamepad2, Clock, Utensils, Infinity as InfinityIcon, Pause, PlayCircle, MonitorOff, Square } from "lucide-react";
 import { toast } from "sonner";
 import { canReleaseStation, releaseStationScreen } from "@/lib/tv-notify";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,7 @@ export function StationCard({
     cardMemberDiscountPercent,
     pauseSession,
     resumeSession,
+    stopSession,
     businessProfile,
   } = useBilling();
   const allow = useCan();
@@ -87,6 +88,21 @@ export function StationCard({
   const paid = paidTotal(session);
   const due = Math.max(0, total - paid);
   const showRelease = businessProfile?.modules?.tvConnect !== false && canReleaseStation(session?.mode, session ? remainingSeconds(session, now) : Infinity);
+  const endSession = () => {
+    if (due > 0) {
+      toast.error(`Sisa tagihan ${formatRupiah(due)} harus dilunasi dulu`);
+      onClick();
+      return;
+    }
+    const record = stopSession(station.id);
+    if (!record) {
+      onClick();
+      return;
+    }
+    // Akhiri sesi selalu melepas layar penuh "Waktu habis" di TV.
+    releaseStationScreen(station.id);
+    toast.success(`${record.stationName} selesai`);
+  };
   const release = () => {
     const result = releaseStationScreen(station.id);
     if (result === "no-bridge") toast.error("Gunakan APK kasir terbaru untuk melepas layar Station.");
@@ -232,7 +248,17 @@ export function StationCard({
 
       {session && (
         <div className="mt-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
-          {!allow("sesi.jeda") ? null : isPaused(session) ? (
+          {status === "timeup" && !isPaused(session) ? (
+            <Button
+              size="sm"
+              variant="destructive"
+              className="min-w-0 flex-1 px-2"
+              disabled={!allow("sesi.akhiri")}
+              onClick={endSession}
+            >
+              <Square className="size-4" /> Akhiri Sesi
+            </Button>
+          ) : !allow("sesi.jeda") ? null : isPaused(session) ? (
             <Button
               size="sm"
               className="min-w-0 flex-1 px-2"

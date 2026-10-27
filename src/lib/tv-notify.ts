@@ -100,8 +100,10 @@ export function messageLines(message: string): string[] {
   return [lines[0] ?? "", lines[1] ?? "", lines.slice(2).join(" ")];
 }
 
+/** Baris kosong dibuang agar kotak pengingat TV setinggi jumlah baris yang terisi. */
 export function tvMessage(message: string, lines?: string[]): string {
-  return lines ? lines.slice(0, 3).join("\n") : message;
+  const source = lines ? lines.slice(0, 3) : message.split("\n");
+  return source.map((line) => line.trim()).filter(Boolean).join("\n");
 }
 
 /** Isi jadwal untuk APK kasir. `{menit}` di pesan diganti angka menit tahap itu. */
