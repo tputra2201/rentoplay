@@ -46,7 +46,9 @@ test("custom reminder title and three lines reach the schedule with minute subst
   const cfg = { ...DEFAULT_TV_CONFIG, stages: [{ minutes: 5, title: "SISA {menit}", message: "legacy", messageLines: ["Baris {menit}", "", "Hubungi kasir"] }], endMessageLines: ["Selesai", "Hubungi kasir", "Terima kasih"] };
   const payload = JSON.parse(tvSchedulePayload(cfg, "Station", 123456, "", "Store"));
   expect(payload.stages[0].title).toBe("SISA 5");
-  expect(payload.stages[0].message).toBe("Baris 5\n\nHubungi kasir");
+  expect(payload.stages[0].message).toBe("Baris 5\nHubungi kasir");
+  const oneLine = JSON.parse(tvSchedulePayload({ ...cfg, stages: [{ minutes: 10, message: "x", messageLines: ["Sisa 10 menit", "", ""] }] }, "Station", 1, "", "Store"));
+  expect(oneLine.stages[0].message).toBe("Sisa 10 menit");
   expect(payload.stages[1].message).toBe("Selesai\nHubungi kasir\nTerima kasih");
 });
 
