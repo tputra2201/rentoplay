@@ -1,6 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { canReleaseStation, releaseStationScreen, tvSchedulePayload, tvConfig, DEFAULT_TV_CONFIG } from "../src/lib/tv-notify";
+import { canReleaseStation, releaseAfterTimeChange, releaseStationScreen, tvSchedulePayload, tvConfig, DEFAULT_TV_CONFIG } from "../src/lib/tv-notify";
 import { removeSolidBackground } from "../src/lib/logo-image";
+
+test("adding time releases the TV screen; reducing time does not", () => {
+  expect(releaseAfterTimeChange(1)).toBe(true);
+  expect(releaseAfterTimeChange(60)).toBe(true);
+  expect(releaseAfterTimeChange(0)).toBe(false);
+  expect(releaseAfterTimeChange(-30)).toBe(false);
+});
 
 describe("Station Release", () => {
   test("only timed sessions whose time has expired can be released", () => {
