@@ -36,6 +36,7 @@ import {
 import { ALARM_SOUNDS, type AlarmSound } from "./alarm";
 import { SETTINGS_KEYS } from "./sync-records";
 import { captureIntent, saveIntentJournal, type IntentQueue } from "./sync-intent";
+import { releaseAfterTimeChange, releaseStationScreen } from "./tv-notify";
 
 /**
  * Waktu batas penutupan otomatis satu hari usaha: tepat pada jam tutup.
@@ -3172,7 +3173,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
 
 
   const addTime = useCallback<Ctx["addTime"]>(
-    (stationId, extraMin) =>
+    (stationId, extraMin) => {
       mapStation(stationId, (s) => {
         if (!s.session) return s;
         const at = Date.now();
@@ -3196,7 +3197,12 @@ export function BillingProvider({ children }: { children: ReactNode }) {
               : {}),
           },
         };
-      }),
+      });
+      // Waktu bertambah: layar penuh "Waktu Habis" di TV langsung dilepas;
+      // DeviceNotifyWatcher membatalkan alarm lama dan menjadwalkan ulang ke
+      // waktu selesai yang baru.
+      if (releaseAfterTimeChange(extraMin)) releaseStationScreen(stationId);
+    },
     [mapStation],
   );
 
@@ -4350,7 +4356,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
         update((prev) => ({ ...prev, receiptLayout: { ...prev.receiptLayout, ...patch } })),
       setInvoiceLayout: (patch) =>
         update((prev) => ({ ...prev, invoiceLayout: { ...prev.invoiceLayout, ...patch } })),
-      adjustBonusTime: (stationId, deltaMin) =>
+      adjustBonusTime: (stationId, deltaMin) => {
         mapStation(stationId, (s) => {
           if (!s.session) return s;
           const delta = Math.round(deltaMin);
@@ -4369,7 +4375,10 @@ export function BillingProvider({ children }: { children: ReactNode }) {
                 : {}),
             },
           };
-        }),
+        });
+        // Waktu ekstra bertambah: layar "Waktu Habis" di TV langsung dilepas.
+        if (releaseAfterTimeChange(deltaMin)) releaseStationScreen(stationId);
+      },
 
       setSessionBonus: (stationId, bonusMin) =>
         mapStation(stationId, (s) =>

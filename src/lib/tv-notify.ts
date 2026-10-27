@@ -56,6 +56,14 @@ export function canReleaseStation(mode: string | undefined, secondsLeft: number)
   return mode !== undefined && mode !== "open" && secondsLeft <= 0;
 }
 
+/**
+ * Menambah waktu (berbayar maupun bonus ekstra) langsung melepas layar
+ * "Waktu Habis" di TV; mengurangi waktu tidak boleh melepas layar.
+ */
+export function releaseAfterTimeChange(deltaMinutes: number): boolean {
+  return Math.round(deltaMinutes) > 0;
+}
+
 export function releaseStationScreen(stationId: string): "sent" | "no-bridge" | "no-ip" {
   const bridge = tvBridge();
   if (!bridge?.dismiss) return "no-bridge";
