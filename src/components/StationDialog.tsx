@@ -675,8 +675,21 @@ function StationDialogBody({
               <AccordionTrigger className="px-3 py-2.5 text-sm font-semibold hover:no-underline">
                 Setup TV
               </AccordionTrigger>
-              <AccordionContent className="px-3 pb-3">
+              <AccordionContent className="space-y-3 px-3 pb-3">
                 <TvControlPanel stationId={station.id} />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => {
+                    const result = releaseStationScreen(station.id);
+                    if (result === "sent") toast.success(`Layar TV ${station.name} dilepas`);
+                    else if (result === "no-ip") toast.error(`IP Layar TV belum diisi. Isi IP di detail ${unit} terlebih dahulu.`);
+                    else toast.error("Perintah TV hanya berjalan di aplikasi Android kasir.");
+                  }}
+                >
+                  Lepas Layar TV (Release)
+                </Button>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
