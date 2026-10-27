@@ -36,7 +36,7 @@ import {
 import { ALARM_SOUNDS, type AlarmSound } from "./alarm";
 import { SETTINGS_KEYS } from "./sync-records";
 import { captureIntent, saveIntentJournal, type IntentQueue } from "./sync-intent";
-import { releaseStationScreen } from "./tv-notify";
+import { releaseAfterTimeChange, releaseStationScreen } from "./tv-notify";
 
 /**
  * Waktu batas penutupan otomatis satu hari usaha: tepat pada jam tutup.
@@ -3201,7 +3201,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
       // Waktu bertambah: layar penuh "Waktu Habis" di TV langsung dilepas;
       // DeviceNotifyWatcher membatalkan alarm lama dan menjadwalkan ulang ke
       // waktu selesai yang baru.
-      if (extraMin > 0) releaseStationScreen(stationId);
+      if (releaseAfterTimeChange(extraMin)) releaseStationScreen(stationId);
     },
     [mapStation],
   );
@@ -4377,7 +4377,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
           };
         });
         // Waktu ekstra bertambah: layar "Waktu Habis" di TV langsung dilepas.
-        if (Math.round(deltaMin) > 0) releaseStationScreen(stationId);
+        if (releaseAfterTimeChange(deltaMin)) releaseStationScreen(stationId);
       },
 
       setSessionBonus: (stationId, bonusMin) =>
