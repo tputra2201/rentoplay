@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { ChevronRight } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -222,13 +224,7 @@ function GroupTables({
                 </TableHeader>
                 <TableBody>
                   {g.items.map((i) => (
-                    <TableRow key={i.name}>
-                      <TableCell>{i.name}</TableCell>
-                      <TableCell className="text-right">{i.count}</TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {formatRupiah(i.total)}
-                      </TableCell>
-                    </TableRow>
+                    <ItemRows key={i.name} item={i} />
                   ))}
                 </TableBody>
               </Table>
@@ -241,6 +237,43 @@ function GroupTables({
         </div>
       )}
     </section>
+  );
+}
+
+function ItemRows({ item }: { item: ItemRow }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <TableRow
+        className="cursor-pointer"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        <TableCell>
+          <span className="inline-flex items-center gap-1">
+            <ChevronRight className={`h-4 w-4 transition-transform ${open ? "rotate-90" : ""}`} />
+            {item.name}
+          </span>
+        </TableCell>
+        <TableCell className="text-right">{item.count}</TableCell>
+        <TableCell className="text-right font-semibold">{formatRupiah(item.total)}</TableCell>
+      </TableRow>
+      {open &&
+        item.entries.map((e) => (
+          <TableRow key={e.id} className="bg-muted/40 text-xs">
+            <TableCell className="pl-8">
+              <span className="whitespace-nowrap">{timeText(e.createdAt)}</span>
+              <span className="text-muted-foreground">
+                {" "}· {e.payment}
+                {e.note ? ` · ${e.note}` : ""}
+                {e.createdBy ? ` · ${e.createdBy}` : ""}
+              </span>
+            </TableCell>
+            <TableCell />
+            <TableCell className="text-right">{formatRupiah(e.amount)}</TableCell>
+          </TableRow>
+        ))}
+    </>
   );
 }
 
