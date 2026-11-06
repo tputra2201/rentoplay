@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Copy, Joystick, LockKeyhole, LogIn, MailQuestion } from "lucide-react";
 import { passwordSetupUrl } from "@/lib/app-url";
 import { isAuthConnectionError } from "@/lib/auth-errors";
+import { compactSyncCache, isStorageQuotaError } from "@/lib/storage-quota";
 import { deviceCode, takeDeviceReject, type DeviceReject } from "@/lib/device-guard";
 import {
   Dialog,
@@ -53,6 +54,7 @@ function AuthPage() {
   const [rejected, setRejected] = useState<DeviceReject | null>(null);
 
   useEffect(() => {
+    compactSyncCache(localStorage);
     setMyCode(deviceCode());
     setRejected(takeDeviceReject());
     let cancelled = false;
@@ -143,13 +145,16 @@ function AuthPage() {
     e.preventDefault();
     setBusy(true);
     try {
+      compactSyncCache(localStorage);
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       toast.success("Berhasil masuk");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Terjadi kesalahan";
       toast.error(
-        isAuthConnectionError(err)
+        isStorageQuotaError(err)
+          ? "Penyimpanan browser penuh, bukan kata sandi salah. Jangan hapus data aplikasi; hubungkan internet dan coba muat ulang."
+          : isAuthConnectionError(err)
           ? "Tidak dapat terhubung. Periksa koneksi internet, lalu coba masuk kembali."
           : message.includes("Invalid login credentials")
           ? "Email atau kata sandi salah"

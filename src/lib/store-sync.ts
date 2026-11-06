@@ -4,6 +4,7 @@ import type { BillingSnapshot } from "./billing-store";
 import { reconcileIntents, canonical, preserveConflicts, type Intent, type IntentQueue } from "./sync-intent";
 import { toast } from "sonner";
 import { intentPersistence } from './intent-persistence';
+import { compactSyncCache, writeWithQuotaRecovery, isStorageQuotaError } from './storage-quota';
 import {
   applyRecords,
   clearSyncedLists,
@@ -136,7 +137,7 @@ async function fetchAllStoreData(
   return { data: all, error: null };
 }
 
-type Shadow = Record<string, string>;
+type Shadow = Record<string, string | true>;
 /** Baris yang menunggu dikirim, plus daftar kolom yang benar-benar diubah di perangkat ini. */
 type Pending = Intent;
 type Outbox = Record<string, Pending>;
@@ -165,26 +166,6 @@ function readJson<T>(key: string, fallback: T): T {
     return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
     return fallback;
-  }
-}
-
-/** JSON dengan urutan kunci tetap, supaya perbandingan tidak terpengaruh urutan. */
-function stableStringify(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
-  if (value && typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
-      a < b ? -1 : a > b ? 1 : 0,
-    );
-    return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${stableStringify(v)}`).join(",")}}`;
-  }
-  return JSON.stringify(value) ?? "null";
-}
-
-function writeJson(key: string, value: unknown) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* penyimpanan penuh: tetap jalan di memori */
   }
 }
 
@@ -261,6 +242,7 @@ export function useStoreSync(options: {
 
   // Muat antrean & bayangan dari perangkat.
   useEffect(() => {
+    compactSyncCache(localStorage);
     shadowRef.current = readJson<Shadow>(SHADOW_KEY, {});
     // Unscoped legacy queues remain untouched and withheld from sync.
     // Do not scan device storage or interrupt every startup with a warning.
@@ -344,7 +326,7 @@ export function useStoreSync(options: {
           localStorage.removeItem(SINCE_KEY);
           // Tandai bahwa data lokal baru saja dikosongkan, jadi isi pusat aman
           // dipakai sebagai satu-satunya sumber saat pengambilan pertama.
-          localStorage.setItem(FRESH_KEY, id);
+          writeWithQuotaRecovery(localStorage, FRESH_KEY, id);
           shadowRef.current = {};
           outboxRef.current = {};
           prevKeysRef.current = null;
@@ -352,7 +334,7 @@ export function useStoreSync(options: {
           setReadyStoreId(null);
         }
         bindStore(id, adopt);
-        localStorage.setItem(STORE_KEY, id);
+        writeWithQuotaRecovery(localStorage, STORE_KEY, id);
         setStoreId(id);
         setError(null);
       } catch (err) {
@@ -407,9 +389,10 @@ export function useStoreSync(options: {
     for (const record of records) {
       const key = recordKey(record.kind, record.entity_id);
       if (record.deleted) delete shadowRef.current[key];
-      else shadowRef.current[key] = stableStringify(record.payload);
+      else shadowRef.current[key] = true;
     }
-    writeJson(SHADOW_KEY, shadowRef.current);
+    try { writeWithQuotaRecovery(localStorage, SHADOW_KEY, JSON.stringify(shadowRef.current)); }
+    catch { /* Rebuilt from a full baseline on every startup; never a transaction. */ }
   }, []);
 
   // Perangkat baru wajib mengambil data pusat lebih dulu. Tanpa tahap ini,
@@ -426,7 +409,7 @@ export function useStoreSync(options: {
     if (hasSyncHistory && !storageLoaded) {
       localStorage.removeItem(SHADOW_KEY);
       localStorage.removeItem(SINCE_KEY);
-      localStorage.setItem(FRESH_KEY, storeId);
+      writeWithQuotaRecovery(localStorage, FRESH_KEY, storeId);
       shadowRef.current = {};
       outboxRef.current = {};
       prevKeysRef.current = null;
@@ -484,17 +467,19 @@ export function useStoreSync(options: {
       persistQueues(storeId);
       setPending(pendingRecords.length);
       const newest = remote.at(-1)?.updated_at;
-      if (newest) localStorage.setItem(SINCE_KEY, newest);
+      if (newest) writeWithQuotaRecovery(localStorage, SINCE_KEY, newest);
       localStorage.removeItem(FRESH_KEY);
       // Ditulis hanya setelah seluruh halaman berhasil diterapkan. Perangkat
       // dengan data parsial dari versi lama otomatis mengulang proses ini.
-      localStorage.setItem(BASELINE_KEY, `${storeId}:${BASELINE_VERSION}`);
+      writeWithQuotaRecovery(localStorage, BASELINE_KEY, `${storeId}:${BASELINE_VERSION}`);
       bootstrappedRef.current = true;
       setError(null);
       setReadyStoreId(storeId);
       } catch (failure) {
         if (!cancelled) {
-          setError(failure instanceof Error ? failure.message : 'Pemulihan transaksi luring belum berhasil. Jangan hapus data perangkat.');
+          setError(isStorageQuotaError(failure)
+            ? 'Penyimpanan browser penuh. Jangan hapus data aplikasi; transaksi luring tetap dipertahankan. Hubungkan internet dan coba muat ulang.'
+            : failure instanceof Error ? failure.message : 'Pemulihan transaksi luring belum berhasil. Jangan hapus data perangkat.');
           retry = setTimeout(() => setBootAttempt(n => n + 1), 8000);
         }
       }
@@ -550,8 +535,8 @@ export function useStoreSync(options: {
         localStorage.removeItem(SHADOW_KEY);
         localStorage.removeItem(SINCE_KEY);
         localStorage.removeItem(BASELINE_KEY);
-        localStorage.setItem(STORE_KEY, currentStoreId);
-        localStorage.setItem(FRESH_KEY, currentStoreId);
+        writeWithQuotaRecovery(localStorage, STORE_KEY, currentStoreId);
+        writeWithQuotaRecovery(localStorage, FRESH_KEY, currentStoreId);
 
         shadowRef.current = {};
         outboxRef.current = {};
@@ -618,7 +603,7 @@ export function useStoreSync(options: {
         setPending(pendingRows(storeId).length);
         const newest = remote.at(-1)?.updated_at;
         const cursor = localStorage.getItem(SINCE_KEY);
-        if (newest && (!cursor || newest > cursor)) localStorage.setItem(SINCE_KEY, newest);
+        if (newest && (!cursor || newest > cursor)) writeWithQuotaRecovery(localStorage, SINCE_KEY, newest);
       }
 
       // 2. Kirim perubahan lokal yang tersisa.

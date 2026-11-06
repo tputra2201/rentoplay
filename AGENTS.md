@@ -16,6 +16,7 @@
 - Station ordering uses stationModuleAccess for Cafe entry points; existing bills and rental add-ons stay accessible when Cafe is disabled, so module changes do not alter financial history.
 - Sync explicit mutations only, never hydration/reads. Atomic store-scoped journal/outbox shards: remove empties, recover/clean old same-store shards only with lifetime Web Lock + fresh read. Pull before push; withhold unscoped legacy queues. Why: protect offline work across tabs/stores.
 - Startup reuses the local auth session for the cloud-enforced membership query; legacy unscoped queues remain withheld silently. Why: avoid redundant identity requests and recurring startup interruptions without weakening store isolation.
+- Sync shadow persists record existence only, not duplicate payloads; quota recovery compacts only that cache and retries durable writes without swallowing failures. Why: preserve offline queues and free space for login and transactions.
 - Store writes use store_apply_intents: membership/base checks, linked atomic commits, visible conflicts, no legacy direct writes or resurrection of retired sessions/closed shifts. Why: prevent multi-cashier/VOID overwrites.
 - Retirement exceptions require one centrally live source and one empty destination in the same base-validated atomic transaction; keep watermarks monotonic. Why: allow active sessions to move back without permitting completed-session replay.
 - `PaymentSplit.at` records receipt time; `shiftSummary` counts cash by it. Why: later bill closure must not move money between shifts.

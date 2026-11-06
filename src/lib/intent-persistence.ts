@@ -1,4 +1,5 @@
 import { enqueueIntent, type Intent } from './sync-intent';
+import { writeWithQuotaRecovery } from './storage-quota';
 
 export const INTENT_QUEUE_PREFIX = 'billing-intent-queue-v2:';
 export type IntentEnvelope = {
@@ -65,7 +66,7 @@ export class IntentPersistence {
     if (!shard.journal.length && !Object.keys(shard.outbox).length) {
       this.storage.removeItem(this.key(shard));
     } else {
-      this.storage.setItem(this.key(shard), JSON.stringify(shard));
+      writeWithQuotaRecovery(this.storage, this.key(shard), JSON.stringify(shard));
     }
   }
 

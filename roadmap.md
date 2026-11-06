@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Pulihkan akses saat kuota browser penuh: shadow menyimpan identitas record tanpa payload duplikat; retry penyimpanan durabel tetap menolak kegagalan. 31 tes lulus; simulasi quota gagal sebelum perbaikan lalu journal berhasil; browser penuh membuka halaman masuk dan dashboard Cosmo Gaming DT tanpa error, antrean offline toko lain tetap utuh. Menunggu publikasi untuk rentoplay.id.
+
 - [x] Pindah Station: pusat mengizinkan transfer aktif yang diverifikasi sumber/tujuan satu transaksi, tetap menolak replay sesi selesai/VOID. 32 tes lulus pada salinan SQL terisolasi; akun Cosmo Gaming DT teruji lewat dua Station sementara: pindah, kembali, reload, timer/pembayaran tetap sama. Unit uji dibersihkan; perbaikan pusat langsung aktif tanpa publikasi web/APK.
 
 - [x] Notifikasi antrean lama dan pemindaian pemicunya dihapus; pemeriksaan identitas jaringan berulang diganti sesi lokal dengan pemeriksaan membership pusat tetap aktif. 27 tes lulus; dashboard akun aktif dan reload tanpa notifikasi teruji, antrean lama tetap utuh. Pesan koneksi diperjelas dan klasifikasinya lulus tes; tampilan pesan gagal masuk belum terverifikasi lewat browser. Belum dipublikasikan.
