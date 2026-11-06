@@ -37,6 +37,7 @@ import { ALARM_SOUNDS, type AlarmSound } from "./alarm";
 import { SETTINGS_KEYS } from "./sync-records";
 import { captureIntent, saveIntentJournal, type IntentQueue } from "./sync-intent";
 import { releaseAfterTimeChange, releaseStationScreen } from "./tv-notify";
+import { writeWithQuotaRecovery } from "./storage-quota";
 
 /**
  * Waktu batas penutupan otomatis satu hari usaha: tepat pada jam tutup.
@@ -2639,7 +2640,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
     if (!hydrated) return;
     const write = (value: State) => {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+        writeWithQuotaRecovery(localStorage, STORAGE_KEY, JSON.stringify(value));
         return true;
       } catch {
         return false;
@@ -2663,7 +2664,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
       toast.warning(
         saved
           ? "Penyimpanan perangkat hampir penuh. Log Book dan riwayat lama di perangkat ini dipangkas — datanya tetap ada di laporan."
-          : "Perangkat ini tidak bisa menyimpan data. Bersihkan penyimpanan browser lalu muat ulang halaman.",
+          : "Penyimpanan browser penuh. Jangan hapus data aplikasi atau tutup aplikasi; hubungkan internet agar transaksi dapat dikirim.",
       );
     }
   }, [state, hydrated]);
