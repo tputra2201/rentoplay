@@ -40,7 +40,7 @@ export function MethodReport({
     const table = cafeTables.find((t) => `pending-${t.id}` === h.id);
     const station = stations.find((s) => `pending-${s.id}` === h.id);
     return { ...h, startAt: table?.openedAt ?? station?.session?.startAt ?? h.endAt,
-      customerName: table?.customerName ?? station?.session?.customerName,
+      customerName: table?.customerName ?? station?.session?.customerName ?? "Umum",
       ...(table ? { kind: "cafe" as const, tableName: table.name } : {}) };
   });
   const rows = methodReportRows([...history, ...pending], cashEntries, range, match, entrySource);
