@@ -51,3 +51,9 @@ test("Cash and Playing Card redemptions are not merchant QRIS receipts", () => {
 test("QRIS refund stays a negative amount; DP application stays internal", () => {
   expect(total(rows([], [cash("card-topup", 20000, stamp(9), { direction: "out" }), cash("booking-dp-used", 100000)]))).toBe(-20000);
 });
+test("tagged DP does not suppress a genuine QRIS balance received seconds later", () => {
+  expect(total(rows([history([
+    { method: "QRIS BCA", amount: 100000, at: stamp(10), source: "booking-dp" },
+    { method: "QRIS BCA", amount: 50000, at: stamp(10) + 1000 },
+  ])], [cash("booking-dp", 100000), cash("booking-dp-used", 100000, stamp(10) + 100)]))).toBe(150000);
+});

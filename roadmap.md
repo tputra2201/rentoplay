@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Laporan Pembayaran QRIS: sertakan DP Reservasi, top-up/pembelian Playing Card dan pembayaran sesi aktif pada waktu penerimaan; cegah hitung ganda DP saat tagihan ditutup, uji agregasi dan tampilan akun aktif.
+- [x] Laporan Pembayaran QRIS mencakup DP Reservasi, top-up/pembelian Playing Card dan pembayaran sesi aktif pada waktu penerimaan, tanpa hitung ganda penggunaan DP. Pengujian agregasi/regresi dan akun Cosmo Gaming DT: DP QRIS wawa Rp90.000 terbaca setelah reload, aplikasi DP Maurent Rp50.000 tidak dihitung kembali. Publikasi web masih diperlukan; APK tidak perlu dibuild ulang.
 
 - [x] Pulihkan akses saat kuota browser penuh: shadow menyimpan identitas record tanpa payload duplikat; retry penyimpanan durabel tetap menolak kegagalan. 31 tes lulus; simulasi quota gagal sebelum perbaikan lalu journal berhasil; browser penuh membuka halaman masuk dan dashboard Cosmo Gaming DT tanpa error, antrean offline toko lain tetap utuh. Menunggu publikasi untuk rentoplay.id.
 

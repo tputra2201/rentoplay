@@ -22,7 +22,6 @@ export function methodReportRows(
     splits.forEach((s, i) => {
       const at = s.at ?? h.paidAt ?? h.endAt;
       let amount = s.amount;
-      if (s.source === "booking-dp") return;
       for (const application of applications) {
         const e = application.entry;
         if (application.remaining <= 0 || normalize(e.payment) !== normalize(s.method)) continue;
@@ -38,7 +37,7 @@ export function methodReportRows(
         application.remaining -= applied;
         if (amount <= 0) break;
       }
-      if (amount <= 0 || !match(s.method) || !inRange(at, range)) return;
+      if (s.source === "booking-dp" || amount <= 0 || !match(s.method) || !inRange(at, range)) return;
       rows.push({ key: `bill-${h.id}-${i}`, at, method: s.method,
         source: h.kind === "cafe" ? "Kafe" : "Rental",
         detail: `${h.tableName ?? h.stationName} · ${h.customerName ?? "Umum"}`, amount });
