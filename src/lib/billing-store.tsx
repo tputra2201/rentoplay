@@ -208,6 +208,8 @@ export type Session = {
 export type Settlement = {
   id: string;
   at: number;
+  /** DP already received through the cash ledger; application is not a new receipt. */
+  source?: "booking-dp";
   payment: string;
   payments?: { method: string; amount: number }[];
   amount: number; // jumlah yang dibayarkan ke tagihan
@@ -1025,6 +1027,7 @@ export type LogEntry = {
 export type PaymentSplit = {
   method: string;
   amount: number;
+  source?: "booking-dp";
   /** Waktu uang ini benar-benar diterima kasir (dipakai untuk kas per shift). */
   at?: number;
 };
@@ -1038,7 +1041,7 @@ export function settlementSplits(s: Settlement): PaymentSplit[] {
   const list: PaymentSplit[] = s.payments?.length
     ? s.payments
     : [{ method: s.payment, amount: s.amount }];
-  return list.map((p) => ({ ...p, at: p.at ?? s.at }));
+  return list.map((p) => ({ ...p, at: p.at ?? s.at, ...(s.source ? { source: s.source } : {}) }));
 }
 
 /** Shift kasir: check-in sampai close out. */
@@ -1947,7 +1950,7 @@ type Ctx = State & {
   stopSession: (stationId: string, payment?: string, amountPaid?: number, payments?: PaymentSplit[]) => HistoryRecord | null;
   settleSession: (
     stationId: string,
-    input: { payment?: string; payments?: PaymentSplit[]; amount: number; amountPaid: number },
+    input: { payment?: string; payments?: PaymentSplit[]; amount: number; amountPaid: number; source?: "booking-dp" },
   ) => Settlement | null;
   removeSettlement: (stationId: string, settlementId: string) => void;
 
@@ -2100,7 +2103,7 @@ type Ctx = State & {
   /** Terima pembayaran sebagian (DP) untuk meja kafe. */
   settleCafeTable: (
     tableId: string,
-    input: { payment?: string; payments?: PaymentSplit[]; amount: number; amountPaid: number },
+    input: { payment?: string; payments?: PaymentSplit[]; amount: number; amountPaid: number; source?: "booking-dp" },
   ) => Settlement | null;
   /** Batalkan satu pembayaran meja kafe yang belum menjadi nota. */
   removeCafeSettlement: (tableId: string, settlementId: string) => void;
@@ -3062,6 +3065,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
         const settlement: Settlement = {
           id: `pay-${at}`,
           at,
+          ...(input.source ? { source: input.source } : {}),
           payment: label,
           ...(input.payments && input.payments.length ? { payments: input.payments } : {}),
           amount,
@@ -4141,6 +4145,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
         const settlement: Settlement = {
           id: `cafepay-${at}-${Math.random().toString(36).slice(2, 7)}`,
           at,
+          ...(input.source ? { source: input.source } : {}),
           payment: label,
           ...(input.payments?.length ? { payments: input.payments } : {}),
           amount,

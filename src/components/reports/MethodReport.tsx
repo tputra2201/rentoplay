@@ -6,12 +6,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { entrySource, formatRupiah, useBilling, type HistoryRecord } from "@/lib/billing-store";
-import { inRange, rangeLabel, type ReportRange } from "@/lib/report-range";
-
-function paidTime(h: HistoryRecord) {
-  return h.paidAt ?? h.endAt;
-}
+import { entrySource, formatRupiah, pendingPaymentRecords, useBilling } from "@/lib/billing-store";
+import { rangeLabel, type ReportRange } from "@/lib/report-range";
+import { methodReportRows } from "@/lib/method-report";
 
 function timeText(ts: number) {
   return new Date(ts).toLocaleString("id-ID", {
@@ -22,15 +19,6 @@ function timeText(ts: number) {
     minute: "2-digit",
   });
 }
-
-type Row = {
-  key: string;
-  at: number;
-  method: string;
-  source: string;
-  detail: string;
-  amount: number;
-};
 
 /**
  * Laporan pembayaran untuk satu kelompok metode (mis. QRIS atau transfer bank).
@@ -47,46 +35,15 @@ export function MethodReport({
   match: (method: string) => boolean;
   emptyText: string;
 }) {
-  const { history, cashEntries } = useBilling();
-
-  const rows: Row[] = [];
-
-  for (const h of history) {
-    const at = paidTime(h);
-    if (!inRange(at, range)) continue;
-    const splits = h.payments?.length
-      ? h.payments
-      : [{ method: h.payment ?? "Cash", amount: h.total }];
-    splits.forEach((s, i) => {
-      if (!match(s.method)) return;
-      rows.push({
-        key: `${h.id}-${i}`,
-        at,
-        method: s.method,
-        source: h.kind === "cafe" ? "Kafe" : "Rental",
-        detail: `${h.tableName ?? h.stationName} · ${h.customerName ?? "Umum"}`,
-        amount: s.amount,
-      });
-    });
-  }
-
-  for (const e of cashEntries) {
-    if (!inRange(e.createdAt, range)) continue;
-    if (!match(e.payment)) continue;
-    // DP reservasi sudah ikut di pembayaran nota saat check-in; jangan dihitung dua kali.
-    const src = entrySource(e);
-    if (src === "booking-dp" || src === "booking-dp-used") continue;
-    rows.push({
-      key: e.id,
-      at: e.createdAt,
-      method: e.payment,
-      source: e.direction === "in" ? "PAY-IN" : "PAY-OUT",
-      detail: `${e.categoryName}${e.note ? ` · ${e.note}` : ""}`,
-      amount: e.direction === "in" ? e.amount : -e.amount,
-    });
-  }
-
-  rows.sort((a, b) => b.at - a.at);
+  const { history, cashEntries, stations, cafeTables } = useBilling();
+  const pending = pendingPaymentRecords({ history, stations, cafeTables }).map((h) => {
+    const table = cafeTables.find((t) => `pending-${t.id}` === h.id);
+    const station = stations.find((s) => `pending-${s.id}` === h.id);
+    return { ...h, startAt: table?.openedAt ?? station?.session?.startAt ?? h.endAt,
+      customerName: table?.customerName ?? station?.session?.customerName,
+      ...(table ? { kind: "cafe" as const, tableName: table.name } : {}) };
+  });
+  const rows = methodReportRows([...history, ...pending], cashEntries, range, match, entrySource);
 
   const total = rows.reduce((s, r) => s + r.amount, 0);
   const income = rows.filter((r) => r.amount > 0).reduce((s, r) => s + r.amount, 0);

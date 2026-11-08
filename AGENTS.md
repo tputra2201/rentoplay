@@ -20,6 +20,7 @@
 - Store writes use store_apply_intents: membership/base checks, linked atomic commits, visible conflicts, no legacy direct writes or resurrection of retired sessions/closed shifts. Why: prevent multi-cashier/VOID overwrites.
 - Retirement exceptions require one centrally live source and one empty destination in the same base-validated atomic transaction; keep watermarks monotonic. Why: allow active sessions to move back without permitting completed-session replay.
 - `PaymentSplit.at` records receipt time; `shiftSummary` counts cash by it. Why: later bill closure must not move money between shifts.
+- Payment-method reports use the receipt ledger helper, include pending settlements, and mark booking-DP applications on settlements/splits; legacy applications are consumed once before period filtering. Why: reconcile bank receipts without counting deposit use as new money.
 - Closing a shift freezes its final figures into `CashShift.snapshot`; closed-shift reports read the snapshot and never recompute.
 - Nullable component props use a null-check wrapper around a non-null body; never return before hooks. Why: closing StationDialog must not change hook count.
 - Thermal transports share thermalCutText spacing/feed-to-cut; cutter override is independent of width, Android never feeds after supplied cuts, stickers opt out. Why: the last line must reach the knife even on narrow roll cutters.
