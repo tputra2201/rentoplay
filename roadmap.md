@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Laporan Pembayaran QRIS: sertakan DP Reservasi, top-up/pembelian Playing Card dan pembayaran sesi aktif pada waktu penerimaan; cegah hitung ganda DP saat tagihan ditutup, uji agregasi dan tampilan akun aktif.
+
 - [x] Pulihkan akses saat kuota browser penuh: shadow menyimpan identitas record tanpa payload duplikat; retry penyimpanan durabel tetap menolak kegagalan. 31 tes lulus; simulasi quota gagal sebelum perbaikan lalu journal berhasil; browser penuh membuka halaman masuk dan dashboard Cosmo Gaming DT tanpa error, antrean offline toko lain tetap utuh. Menunggu publikasi untuk rentoplay.id.
 
 - [x] Pindah Station: pusat mengizinkan transfer aktif yang diverifikasi sumber/tujuan satu transaksi, tetap menolak replay sesi selesai/VOID. 32 tes lulus pada salinan SQL terisolasi; akun Cosmo Gaming DT teruji lewat dua Station sementara: pindah, kembali, reload, timer/pembayaran tetap sama. Unit uji dibersihkan; perbaikan pusat langsung aktif tanpa publikasi web/APK.
