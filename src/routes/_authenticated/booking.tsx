@@ -229,7 +229,7 @@ function BookingRow({ item, stationName, locked, onStatus, onDelete }: { item: B
       }
       if (dpAmount > 0 && !item.dpUsedAt) {
         if (shiftOpen) {
-          settleCafeTable(table.id, { payment: item.dpPayment || "Cash", amount: dpAmount, amountPaid: dpAmount });
+          settleCafeTable(table.id, { payment: item.dpPayment || "Cash", amount: dpAmount, amountPaid: dpAmount, source: "booking-dp" });
           addCashEntry({ categoryId: BOOKING_DP_USED_CATEGORY_ID, source: "booking-dp-used", amount: dpAmount, payment: item.dpPayment || "Cash", note: `DP reservasi ${item.customerName} dipakai di Meja ${table.name}` });
           updateBooking(item.id, { status: "checked-in", dpUsedAt: Date.now() });
           toast.success(`${item.customerName} check-in di Meja ${table.name} · DP ${formatRupiah(dpAmount)} sudah dipakai`);
@@ -262,6 +262,7 @@ function BookingRow({ item, stationName, locked, onStatus, onDelete }: { item: B
     if (dpAmount > 0 && !item.dpUsedAt) {
       if (shiftOpen) {
         settleSession(item.stationId, {
+          source: "booking-dp",
           payment: item.dpPayment || "Cash",
           amount: dpAmount,
           amountPaid: dpAmount,
