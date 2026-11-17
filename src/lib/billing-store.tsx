@@ -2749,7 +2749,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
         const splits: PaymentSplit[] = settlements.flatMap((s) =>
           settlementSplits(s),
         );
-        const historyId = session.historyId ?? `${station.id}-paid-${at}`;
+        const historyId = freshHistoryId(session.historyId, prev.history, `${station.id}-paid-${at}`);
         added.push({
           id: historyId,
           stationName: station.name,
@@ -2969,7 +2969,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
           ? Math.floor(total / Math.max(1, prev.pointsPerRupiah))
           : 0;
         const completedRecord: HistoryRecord = {
-          id: session.historyId ?? `${stationId}-${endAt}`,
+          id: freshHistoryId(session.historyId, prev.history, `${stationId}-${endAt}`),
           stationName: station.name,
           console: station.console,
           mode: session.mode,
@@ -3086,7 +3086,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
         const splits: PaymentSplit[] = settlements.flatMap((s) =>
           settlementSplits(s),
         );
-        const historyId = station.session.historyId ?? `${stationId}-paid-${at}`;
+        const historyId = freshHistoryId(station.session.historyId, prev.history, `${stationId}-paid-${at}`);
         const sess = station.session;
         const receipt: HistoryRecord = {
           id: historyId,
@@ -5971,4 +5971,16 @@ export function playAlarm() {
 /** Sebutan unit sewa store ini (bawaan "TV"). */
 export function useUnitLabel() {
   return useBilling().businessProfile.unitLabel.trim() || "TV";
+}
+
+// Nota yang sudah dihapus di pusat tidak boleh dipakai ulang: pusat menolak
+// menghidupkan kembali record terhapus, sehingga Akhiri Sesi akan terblokir.
+export function freshHistoryId(
+  current: string | undefined,
+  history: { id: string }[],
+  fallback: string,
+): string {
+  if (current && history.some((h) => h.id === current)) return current;
+  if (!current && !history.some((h) => h.id === fallback)) return fallback;
+  return `${fallback}-r${Date.now().toString(36)}`;
 }
