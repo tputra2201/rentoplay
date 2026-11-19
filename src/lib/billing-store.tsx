@@ -35,7 +35,7 @@ import {
 } from "./report-range";
 import { ALARM_SOUNDS, type AlarmSound } from "./alarm";
 import { SETTINGS_KEYS } from "./sync-records";
-import { captureIntent, saveIntentJournal, type IntentQueue } from "./sync-intent";
+import { captureIntent, saveIntentJournal, type DeleteScope, type IntentQueue } from "./sync-intent";
 import { releaseAfterTimeChange, releaseStationScreen } from "./tv-notify";
 import { writeWithQuotaRecovery } from "./storage-quota";
 
@@ -1472,9 +1472,8 @@ export function pendingPaymentRecords(state: {
   const out: HistoryRecord[] = [];
   for (const g of groups) {
     if (!g.settlements?.length) continue;
+    // Nota sesi sudah terbaca: uangnya dihitung dari nota itu.
     if (g.historyId && known.has(g.historyId)) continue;
-    // Sudah lunas: notanya sudah ada di riwayat dengan seluruh pembayaran.
-    if (g.paidAt) continue;
     const payments = g.settlements.flatMap((s) => settlementSplits(s));
     const last = g.settlements[g.settlements.length - 1]!.at;
     out.push({
@@ -2554,10 +2553,17 @@ export function BillingProvider({ children }: { children: ReactNode }) {
     stateRef.current = next;
     setReactState(next);
   }, []);
+  // Nota & Log Book hanya boleh terhapus di pusat lewat aksi eksplisit.
+  const deleteScopeRef = useRef<DeleteScope>('none');
+  const explicitDelete = useCallback(<T,>(scope: DeleteScope, run: () => T): T => {
+    const previous = deleteScopeRef.current;
+    deleteScopeRef.current = scope;
+    try { return run(); } finally { deleteScopeRef.current = previous; }
+  }, []);
   const setState = useCallback((action: State | ((prev: State) => State)) => {
     const prev = stateRef.current;
     const next = typeof action === 'function' ? action(prev) : action;
-    intentsRef.current.push(...captureIntent(prev, next));
+    intentsRef.current.push(...captureIntent(prev, next, deleteScopeRef.current));
     try { saveIntentJournal(intentsRef.current, next.storeId); }
     catch { toast.warning('Transaksi belum aman tersimpan di perangkat. Jangan tutup aplikasi; sambungkan internet atau kosongkan ruang penyimpanan.', { id: 'intent-storage-failed', duration: 15000 }); }
     setRawState(next);
@@ -2709,81 +2715,10 @@ export function BillingProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("storage", onStorage);
   }, [hydrated]);
 
-  // Sesi yang tagihannya sudah lunas selalu punya nota di laporan, termasuk
-  // sesi yang dilunasi sebelum fitur nota otomatis ada.
-  useEffect(() => {
-    if (!hydrated) return;
-    setRawState((prev) => {
-      const missing = prev.stations.filter((station) => {
-        const session = station.session;
-        if (!session) return false;
-        const settlements = session.settlements ?? [];
-        if (!settlements.length) return false;
-        if (session.historyId && prev.history.some((h) => h.id === session.historyId))
-          return false;
-        const paid = settlements.reduce((sum, s) => sum + s.amount, 0);
-        const methods = settlements.flatMap((s) =>
-          s.payments?.length ? s.payments.map((p) => p.method) : [s.payment],
-        );
-        const at = settlements[settlements.length - 1]!.at;
-        const bill = sessionBill(session, at, station.console, prev, {
-          member: Boolean(session.member),
-          card: methods.some((m) => m === CARD_PAYMENT_NAME),
-        });
-        return bill.total > 0 && paid + 0.5 >= bill.total;
-      });
-      if (!missing.length) return prev;
-      const added: HistoryRecord[] = [];
-      const stations = prev.stations.map((station) => {
-        if (!missing.includes(station) || !station.session) return station;
-        const session = station.session;
-        const settlements = session.settlements ?? [];
-        const at = settlements[settlements.length - 1]!.at;
-        const methods = settlements.flatMap((s) =>
-          s.payments?.length ? s.payments.map((p) => p.method) : [s.payment],
-        );
-        const bill = sessionBill(session, at, station.console, prev, {
-          member: Boolean(session.member),
-          card: methods.some((m) => m === CARD_PAYMENT_NAME),
-        });
-        const splits: PaymentSplit[] = settlements.flatMap((s) =>
-          settlementSplits(s),
-        );
-        const historyId = freshHistoryId(session.historyId, prev.history, `${station.id}-paid-${at}`);
-        added.push({
-          id: historyId,
-          stationName: station.name,
-          console: station.console,
-          mode: session.mode,
-          startAt: session.startAt,
-          endAt: at,
-          paidAt: at,
-          ongoing: true,
-          minutes: Math.ceil(elapsedSeconds(session, at) / 60),
-          rentalTotal: bill.rental,
-          ...(bill.addon ? { addonTotal: bill.addon } : {}),
-          ...(session.addons?.length ? { addons: session.addons } : {}),
-          fnbTotal: bill.fnb,
-          total: bill.total,
-          payment: Array.from(new Set(methods)).filter(Boolean).join(" + ") || "Cash",
-          ...(splits.length > 0 ? { payments: splits } : {}),
-          customerName: session.customerName,
-          customerPhone: session.customerPhone,
-          packageName: session.packageName,
-          amountPaid: settlements.reduce((sum, s) => sum + s.amountPaid, 0),
-          change: settlements.reduce((sum, s) => sum + s.change, 0),
-          orders: session.orders,
-          ...(session.customerId ? { customerId: session.customerId } : {}),
-          ...(session.promoName || bill.promoName
-            ? { promoName: session.promoName || bill.promoName }
-            : {}),
-          discount: bill.discount,
-        });
-        return { ...station, session: { ...session, historyId, paidAt: at } };
-      });
-      return { ...prev, stations, history: [...added, ...prev.history] };
-    });
-  }, [hydrated, state.stations, state.history]);
+  // Nota sesi dibuat hanya oleh aksi kasir yang tersinkron (bayar/akhiri sesi).
+  // Dulu efek di sini membuat nota & mengganti nomor nota sesi hanya di perangkat
+  // ini; Station lokal jadi berbeda dari pusat sehingga Akhiri Sesi terus ditolak.
+  // Uang sesi yang notanya belum terbaca tetap terhitung lewat pendingPaymentRecords.
 
 
 
@@ -2969,7 +2904,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
           ? Math.floor(total / Math.max(1, prev.pointsPerRupiah))
           : 0;
         const completedRecord: HistoryRecord = {
-          id: freshHistoryId(session.historyId, prev.history, `${stationId}-${endAt}`),
+          id: session.historyId ?? `${stationId}-${endAt}`,
           stationName: station.name,
           console: station.console,
           mode: session.mode,
@@ -3086,7 +3021,8 @@ export function BillingProvider({ children }: { children: ReactNode }) {
         const splits: PaymentSplit[] = settlements.flatMap((s) =>
           settlementSplits(s),
         );
-        const historyId = freshHistoryId(station.session.historyId, prev.history, `${stationId}-paid-${at}`);
+        // Nomor nota milik sesi tidak pernah diganti: pusat memvalidasinya lewat Station.
+        const historyId = station.session.historyId ?? `${stationId}-paid-${at}`;
         const sess = station.session;
         const receipt: HistoryRecord = {
           id: historyId,
@@ -3149,7 +3085,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
   );
 
   const removeSettlement = useCallback<Ctx["removeSettlement"]>(
-    (stationId, settlementId) =>
+    (stationId, settlementId) => explicitDelete("history", () =>
       setState((prev) => {
         const station = prev.stations.find((s) => s.id === stationId);
         if (!station?.session) return prev;
@@ -3170,8 +3106,8 @@ export function BillingProvider({ children }: { children: ReactNode }) {
             return { ...s, session: { ...rest, settlements } };
           }),
         };
-      }),
-    [setState],
+      })),
+    [setState, explicitDelete],
   );
 
 
@@ -3922,7 +3858,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
         })),
       voidSession: (stationId, reason) => {
         let record: VoidRecord | null = null;
-        setState((prev) => {
+        explicitDelete("history", () => setState((prev) => {
           const station = prev.stations.find((s) => s.id === stationId);
           const session = station?.session;
           if (!station || !session) return prev;
@@ -3967,7 +3903,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
             "VOID transaksi rental",
             `${station.name} · ${made.customerName} · ${formatRupiah(made.total)} · alasan: ${made.reason || "-"}`,
           );
-        });
+        }));
         return record;
       },
       voidCafeTable: (tableId, reason) => {
@@ -5444,7 +5380,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
             `${target?.stationName ?? id} · ${target?.payment ?? "-"} → ${patch.payment ?? "-"}`,
           );
         }),
-      removeHistory: (id) =>
+      removeHistory: (id) => explicitDelete("history", () =>
         update((prev) => {
           const target = prev.history.find((item) => item.id === id);
           return withLog(
@@ -5454,16 +5390,16 @@ export function BillingProvider({ children }: { children: ReactNode }) {
               ? `${target.stationName} · ${target.customerName ?? "Umum"} · ${formatRupiah(target.total)}`
               : id,
           );
-        }),
-      clearHistory: () =>
+        })),
+      clearHistory: () => explicitDelete("history", () =>
         update((prev) =>
           withLog(
             { ...prev, history: [] },
             "Hapus seluruh riwayat nota",
             `${prev.history.length} nota`,
           ),
-        ),
-      resetTransactions: () =>
+        )),
+      resetTransactions: () => explicitDelete("all", () =>
         update((prev) =>
           withLog(
             {
@@ -5493,7 +5429,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
             "Reset semua transaksi",
             `${prev.history.length} nota · ${prev.cashEntries.length} catatan kas · ${prev.bookings.length} reservasi · ${prev.playingCards.length} playing card`,
           ),
-        ),
+        )),
 
       addCashCategory: (input) => {
         const name = input.name.trim();
@@ -5847,11 +5783,11 @@ export function BillingProvider({ children }: { children: ReactNode }) {
       replaceAll: (data) => {
         // Pemulihan dari berkas cadangan memang dimaksudkan menimpa pusat.
         markSettingsDirty("consoleTypes", "rates", "consoleDiscounts");
-        setState({ ...migrateState(data), storeId: state.storeId });
+        explicitDelete("all", () => setState({ ...migrateState(data), storeId: state.storeId }));
         update((prev) => withLog(prev, "Pulihkan data dari berkas cadangan"));
       },
       resetAll: () => {
-        setState({ ...JSON.parse(JSON.stringify(defaultState)), storeId: state.storeId } as State);
+        explicitDelete("all", () => setState({ ...JSON.parse(JSON.stringify(defaultState)), storeId: state.storeId } as State));
         update((prev) => withLog(prev, "Reset seluruh data aplikasi"));
       },
       addLog,
@@ -5877,6 +5813,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
       mapStation,
       withLog,
       addLog,
+      explicitDelete,
     ],
   );
 
@@ -5973,14 +5910,4 @@ export function useUnitLabel() {
   return useBilling().businessProfile.unitLabel.trim() || "TV";
 }
 
-// Nota yang sudah dihapus di pusat tidak boleh dipakai ulang: pusat menolak
-// menghidupkan kembali record terhapus, sehingga Akhiri Sesi akan terblokir.
-export function freshHistoryId(
-  current: string | undefined,
-  history: { id: string }[],
-  fallback: string,
-): string {
-  if (current && history.some((h) => h.id === current)) return current;
-  if (!current && !history.some((h) => h.id === fallback)) return fallback;
-  return `${fallback}-r${Date.now().toString(36)}`;
-}
+

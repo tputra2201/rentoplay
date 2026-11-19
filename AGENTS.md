@@ -38,3 +38,4 @@
 
 - Station group tones derive from name prefixes (with six-item fallback) and CSS theme tokens, independent of billing status and responsive grid position, so group identity remains stable.
 - Station/Cafe/Store setup use focused tabs; TV connections stay in station details and device-local storage. Why: one configuration entry point without sync changes.
+- Receipts (history) and Log Book rows are deleted centrally only by explicit actions (explicitDelete scope); a session's receipt id is never regenerated on-device, and store_apply_intents accepts a session-owned receipt when its station is sent with a live-matching base. Why: local list trimming must not lock Akhiri Sesi.
